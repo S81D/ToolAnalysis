@@ -14,7 +14,7 @@ bool EventSelector::Initialise(std::string configfile, DataModel &data){
 
   fPMTMRDOffset = false;
   fIsMC = true;
-  fPMTMRDOffset = 745;
+  fPMTMRDOffset = 755;
   fRecoPDG = -1;
 
   //Get the tool configuration variables
@@ -695,8 +695,15 @@ bool EventSelector::EventSelectionByPMTMRDCoinc() {
         for (unsigned int i_hit = 0; i_hit < Hits.size(); i_hit++){
           time_temp+=Hits.at(i_hit).GetTime();
           int tube = Hits.at(i_hit).GetTubeId();
-          double charge_pe = Hits.at(i_hit).GetCharge()/ChannelNumToTankPMTSPEChargeMap->at(tube);
-          charge_temp+=charge_pe;
+	  // check if PMT is present in the map before accessing it
+	  auto it = ChannelNumToTankPMTSPEChargeMap->find(tube);
+	  if (it != ChannelNumToTankPMTSPEChargeMap->end()) {
+	  	double charge_pe = Hits.at(i_hit).GetCharge() / it->second;
+	  	charge_temp += charge_pe;
+	  } else {
+	  	std::cerr << "PMT channel with hit not found in ChannelNumToTankPMTSPEChargeMap. Skipping this hit." << std::endl;
+	  	continue;
+	  }
         }
         if (Hits.size()>0) time_temp/=Hits.size();
         vec_pmtclusters_charge->push_back(charge_temp);
