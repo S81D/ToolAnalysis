@@ -134,13 +134,23 @@ bool ANNIEEventTreeMaker::Initialise(std::string configfile, DataModel &data)
   fANNIETree->Branch("clusterChargePointZ", &fClusterChargePointZV);
   fANNIETree->Branch("clusterChargeBalance", &fClusterChargeBalanceV);
   fANNIETree->Branch("clusterHits", &fClusterHits);
+  fANNIETree->Branch("Cluster_HitX", &fCluster_HitX);
+  fANNIETree->Branch("Cluster_HitY", &fCluster_HitY);
+  fANNIETree->Branch("Cluster_HitZ", &fCluster_HitZ);
+  fANNIETree->Branch("Cluster_HitT", &fCluster_HitT);
+  fANNIETree->Branch("Cluster_HitQ", &fCluster_HitQ);
+  fANNIETree->Branch("Cluster_HitPE", &fCluster_HitPE);
+  fANNIETree->Branch("Cluster_HitType", &fCluster_HitType);
+  fANNIETree->Branch("Cluster_HitDetID", &fCluster_HitDetID);
+  fANNIETree->Branch("Cluster_HitChankey", &fCluster_HitChankey);
+  fANNIETree->Branch("Cluster_HitChankeyMC", &fCluster_HitChankeyMC);
 
   // MRD cluster information
   fANNIETree->Branch("eventTimeMRD", &fEventTimeMRD_Tree);
   fANNIETree->Branch("MRDClusterNumber", &fMRDClusterNumber);
   fANNIETree->Branch("MRDClusterTime", &fMRDClusterTime);
   fANNIETree->Branch("MRDClusterTimeSigma", &fMRDClusterTimeSigma);
-  fANNIETree->Branch("MRDClusterHits", &fMRDClusterHits);
+  fANNIETree->Branch("MRDClusterHitNumber", &fMRDClusterHitNumber);
 
   if (TankHitInfo_fill)
   {
@@ -255,7 +265,11 @@ bool ANNIEEventTreeMaker::Initialise(std::string configfile, DataModel &data)
 
   if (MRDHitInfo_fill)
   {
+    fANNIETree->Branch("MRDHitClusterIndex", &fMRDHitClusterIndex);
     fANNIETree->Branch("MRDhitT", &fMRDHitT);
+    fANNIETree->Branch("MRDHitCharge", &fMRDHitCharge);
+    fANNIETree->Branch("MRDHitDigitPMT", &fMRDHitDigitPMT);
+
     fANNIETree->Branch("MRDhitDetID", &fMRDHitDetID);
     fANNIETree->Branch("MRDhitChankey", &fMRDHitChankey);
     fANNIETree->Branch("MRDhitChankeyMC", &fMRDHitChankeyMC);
@@ -268,7 +282,7 @@ bool ANNIEEventTreeMaker::Initialise(std::string configfile, DataModel &data)
 
   if (MRDReco_fill)
   {
-    fANNIETree->Branch("fMRDClusterIndex", &fMRDClusterIndex);
+    fANNIETree->Branch("MRDClusterIndex", &fMRDClusterIndex);
     fANNIETree->Branch("NumClusterTracks", &fNumClusterTracks);
     fANNIETree->Branch("MRDTrackAngle", &fMRDTrackAngle);
     fANNIETree->Branch("MRDTrackAngleError", &fMRDTrackAngleError);
@@ -288,11 +302,8 @@ bool ANNIEEventTreeMaker::Initialise(std::string configfile, DataModel &data)
     fANNIETree->Branch("MRDThrough", &fMRDThrough);
   }
 
-  if (fillCleanEventsOnly)
-  {
-    fANNIETree->Branch("eventStatusApplied", &fEventStatusApplied, "eventStatusApplied/I");
-    fANNIETree->Branch("eventStatusFlagged", &fEventStatusFlagged, "eventStatusFlagged/I");
-  }
+  fANNIETree->Branch("eventStatusApplied", &fEventStatusApplied, "eventStatusApplied/I");
+  fANNIETree->Branch("eventStatusFlagged", &fEventStatusFlagged, "eventStatusFlagged/I");
 
   // MC truth information for muons
   // Output to tree when MCTruth_fill = 1 in config
@@ -454,10 +465,11 @@ bool ANNIEEventTreeMaker::Execute()
 
   //****************************** fillCleanEventsOnly *************************************//
   //  If only clean events are built, return true for dirty events
+  auto get_flagsapp = m_data->Stores.at("RecoEvent")->Get("EventFlagApplied", fEventStatusApplied);
+  auto get_flags = m_data->Stores.at("RecoEvent")->Get("EventFlagged", fEventStatusFlagged);
+
   if (fillCleanEventsOnly)
   {
-    auto get_flagsapp = m_data->Stores.at("RecoEvent")->Get("EventFlagApplied", fEventStatusApplied);
-    auto get_flags = m_data->Stores.at("RecoEvent")->Get("EventFlagged", fEventStatusFlagged);
     // auto get_cutstatus = m_data->Stores.at("RecoEvent")->Get("EventCutStatus",fEventCutStatus);
     if (!get_flagsapp || !get_flags)
     {
@@ -730,12 +742,15 @@ void ANNIEEventTreeMaker::ResetVariables()
   // MRD cluster information
   fEventTimeMRD_Tree = 0;
   fMRDClusterNumber = 0;
-  fMRDClusterHits = 0;
-  fMRDClusterTime = 0;
-  fMRDClusterTimeSigma = 0;
+  fMRDClusterHitNumber.clear();
+  fMRDClusterTime.clear();
+  fMRDClusterTimeSigma.clear();
 
   fVetoHit = 0;
+  fMRDHitClusterIndex.clear();
   fMRDHitT.clear();
+  fMRDHitCharge.clear();
+  fMRDHitDigitPMT.clear();
   fMRDHitDetID.clear();
   fMRDHitChankey.clear();
   fMRDHitChankeyMC.clear();
@@ -1296,9 +1311,9 @@ void ANNIEEventTreeMaker::FillLAPPDInfo()
     // check if SwitchBitBG has the key
     if (SwitchBitBG.find(psecData.LAPPD_ID) != SwitchBitBG.end())
     {
-      if(SwitchBitBG[psecData.LAPPD_ID].size() != 2)
+      if (SwitchBitBG[psecData.LAPPD_ID].size() != 2)
       {
-        cout<<"ANNIEEventTreeMaker: SwitchBitBG size is not 2, LAPPD_ID: "<<psecData.LAPPD_ID<<", size: "<<SwitchBitBG[psecData.LAPPD_ID].size()<<endl;
+        cout << "ANNIEEventTreeMaker: SwitchBitBG size is not 2, LAPPD_ID: " << psecData.LAPPD_ID << ", size: " << SwitchBitBG[psecData.LAPPD_ID].size() << endl;
         continue;
       }
       fLAPPD_BG_switchBit0.push_back(SwitchBitBG[psecData.LAPPD_ID][0]);
@@ -1704,6 +1719,8 @@ bool ANNIEEventTreeMaker::LoadTankClusterClassifiers(double cluster_time)
 void ANNIEEventTreeMaker::LoadMRDCluster()
 {
   std::vector<double> mrddigittimesthisevent;
+  std::vector<double> mrddigitchargesthisevent;
+  ;
   std::vector<int> mrddigitpmtsthisevent;
   std::vector<unsigned long> mrddigitchankeysthisevent;
   std::vector<std::vector<int>> MrdTimeClusters;
@@ -1723,6 +1740,8 @@ void ANNIEEventTreeMaker::LoadMRDCluster()
     m_data->CStore.Get("MrdDigitTimes", mrddigittimesthisevent);
     m_data->CStore.Get("MrdDigitPmts", mrddigitpmtsthisevent);
     m_data->CStore.Get("MrdDigitChankeys", mrddigitchankeysthisevent);
+    m_data->CStore.Get("MrdDigitCharges", mrddigitchargesthisevent);
+    m_data->CStore.Get("MrdDigitPmts", mrddigitpmtsthisevent);
   }
 
   std::map<unsigned long, vector<Hit>> *TDCData = nullptr;
@@ -1743,7 +1762,7 @@ void ANNIEEventTreeMaker::LoadMRDCluster()
   for (int i = 0; i < (int)MrdTimeClusters.size(); i++)
   {
     int tdcdata_size = (isData) ? TDCData->size() : TDCData_MC->size();
-    fMRDClusterHits = 0;
+    int fMRDClusterHits = 0;
     if (has_tdc && tdcdata_size > 0)
     {
       Log("ANNIEEventTreeMaker tool: Looping over FACC/MRD hits... looking for Veto activity", v_debug, ANNIEEventTreeMakerVerbosity);
@@ -1801,6 +1820,9 @@ void ANNIEEventTreeMaker::LoadMRDCluster()
       unsigned long detkey = thedetector->GetDetectorID();
 
       fMRDHitT.push_back(mrddigittimesthisevent.at(ThisClusterIndices.at(j)));
+      fMRDHitClusterIndex.push_back(i);
+      fMRDHitCharge.push_back(mrddigitchargesthisevent.at(ThisClusterIndices.at(j)));
+      fMRDHitDigitPMT.push_back(mrddigitpmtsthisevent.at(ThisClusterIndices.at(j)));
       fMRDHitDetID.push_back(detkey);
       if (isData)
         fMRDHitChankey.push_back(mrddigitchankeysthisevent.at(ThisClusterIndices.at(j)));
@@ -1814,7 +1836,9 @@ void ANNIEEventTreeMaker::LoadMRDCluster()
       fMRDClusterHits += 1;
     }
 
-    ComputeMeanAndVariance(fMRDHitT, fMRDClusterTime, fMRDClusterTimeSigma);
+    double MRDThisClusterTime = 0;
+    double MRDThisClusterTimeSigma = 0;
+    ComputeMeanAndVariance(fMRDHitT, MRDThisClusterTime, MRDThisClusterTimeSigma);
     // FIXME: calculate fMRDClusterTime
 
     // Standard run level information
@@ -1827,6 +1851,10 @@ void ANNIEEventTreeMaker::LoadMRDCluster()
       // Get the track info
     }
     cluster_num++;
+
+    fMRDClusterHitNumber.push_back(fMRDClusterHits);
+    fMRDClusterTime.push_back(MRDThisClusterTime);
+    fMRDClusterTimeSigma.push_back(MRDThisClusterTimeSigma);
   }
   fMRDClusterNumber = cluster_num;
   Log("ANNIEEventTreeMaker Tool: MRD cluster, Finished loading MRD cluster info", v_debug, ANNIEEventTreeMakerVerbosity);

@@ -56,7 +56,7 @@ vector<vector<ULong64_t>> fitInThisReset(
     cout << "LAPPD_PPS size: " << LAPPD_PPS.size() << endl;
     cout << "CTCTrigger size: " << CTCTrigger.size() << endl;
     cout << "CTCPPS size: " << CTCPPS.size() << endl;
-    cout << "PPSDeltaT: " << PPSDeltaT << endl;
+    cout << "PPSDeltaT: " << PPSDeltaT << endl; // in ps
     // for this input PPS, fit an offset
     // return the offset and other information in order
     // precedure:
@@ -70,12 +70,20 @@ vector<vector<ULong64_t>> fitInThisReset(
     {
 
         double diff = static_cast<double>(LAPPD_PPS[i] - LAPPD_PPS[i - 1]);
+        cout<<fixed<<"PPSDiff = "<<diff<<endl;
         // cout << "LAPPD_PPS[" << i << "]: " << LAPPD_PPS[i] / 1E9 / 1000 << ", diff is " << diff / 1E9 / 1000 << endl;
         //  cout << "diff: " << diff/1E9 << ", 0.9*deltaT = " << 0.9 * PPSDeltaT/1E9 << ", 1.1*deltaT = " << 1.1 * PPSDeltaT/1E9 << endl;
         // only save the time interval that is close to the deltaT, to avoid the clock tick level miss and the whole PPS pulse was missed.
         if (diff > 0.9 * PPSDeltaT && diff < 1.1 * PPSDeltaT)
+        {
             PPSInterval_ACDC.push_back((PPSDeltaT - diff) / 1000 / 1000);
-        // cout << "Diff of Interval to deltaT in s is " << (PPSDeltaT - diff) / 1000 / 1E9 << endl;
+            cout << "push back interval in us = " << (PPSDeltaT - diff) / 1000 / 1000 << ", 0.9*PPSdeltaT = " << 0.9 * PPSDeltaT / 1E9 << ", 1.1*PPSdeltaT = " << 1.1 * PPSDeltaT / 1E9 << endl;
+        }
+        else
+        {
+            cout << "0.9*PPSdeltaT = " << 0.9 * PPSDeltaT / 1E9 << ", 1.1*PPSdeltaT = " << 1.1 * PPSDeltaT / 1E9 << ", diff = " << (PPSDeltaT - diff) / 1000 / 1000 << endl;
+        }
+        //cout << "Diff of Interval to deltaT in second is " << (PPSDeltaT - diff) / 1000 / 1E9 << endl;
     }
     int totalPPS = LAPPD_PPS.size();
     int driftedPPS = 0;
@@ -84,10 +92,11 @@ vector<vector<ULong64_t>> fitInThisReset(
     for (int i = 0; i < PPSInterval_ACDC.size(); i++)
     {
         // only fill the drift histogram if there is a drift > 2 microseconds
-        if (PPSInterval_ACDC[i] / 1000 / 1000 > 2)
+        cout<<"PPSInterval_ACDC["<<i<<"] = "<<PPSInterval_ACDC[i]<<endl;
+        if (PPSInterval_ACDC[i] > 2)
         {
-            h->Fill(PPSInterval_ACDC[i] / 1000 / 1000); // fill in microseconds
-            // cout << "Fill histogram: PPSInterval_ACDC[" << i << "]: " << PPSInterval_ACDC[i] / 1000 / 1000 << endl;
+            h->Fill(PPSInterval_ACDC[i]); // fill in microseconds
+            cout << "Fill histogram: PPSInterval_ACDC[" << i << "]: " << PPSInterval_ACDC[i] << endl;
         }
     }
 
@@ -124,9 +133,12 @@ vector<vector<ULong64_t>> fitInThisReset(
             }
             else
             {
-                double driftScaling = LAPPD_PPS_ns / trueInterval / 1000;
+                double LAPPD_PPS_ns_dd = static_cast<double>(LAPPD_PPS_ns);
+                double driftScaling = LAPPD_PPS_ns_dd / (trueInterval / 1000);
                 ULong64_t totalDriftedClock = static_cast<ULong64_t>(drift * driftScaling / 1000);
                 offsetNow_ns = CTCPPS.at(j) - (LAPPD_PPS_ns + totalDriftedClock);
+                if (i < 3 && j < 3)
+                    cout<<"totalDriftedClock in ns = "<<driftScaling <<" number of interval * "<<drift/1000 <<" ns drift per interval = "<<totalDriftedClock<<" ns."<<endl;
             }
 
             if (i < 3 && j < 3)
@@ -154,9 +166,13 @@ vector<vector<ULong64_t>> fitInThisReset(
                 ULong64_t driftCorrectionForTS = 0;
                 if (drift != 0)
                 {
-                    double driftScaling = TS_ns / trueInterval / 1000;
+                    double TS_ns_dd = static_cast<double>(TS_ns);
+                    double driftScaling = TS_ns_dd / (trueInterval / 1000);
                     driftCorrectionForTS = static_cast<ULong64_t>(drift * driftScaling / 1000);
+                    if(lappdb<3 && i<3 && j<3)
+                        cout<<i<<j<<lappdb<<": driftCorrectionForTS = "<<driftScaling <<" number of interval * "<<drift/1000 <<" ns drift per interval = "<<driftCorrectionForTS<<" ns."<<endl;
                 }
+
 
                 // this is the TS we use for matching
                 ULong64_t DriftCorrectedTS_ns = TS_ns + offsetNow_ns + driftCorrectionForTS;
@@ -334,10 +350,12 @@ vector<vector<ULong64_t>> fitInThisReset(
     {
         ULong64_t LAPPD_PPS_ns = LAPPD_PPS.at(final_i) / 1000;
         ULong64_t LAPPD_PPS_truncated_ps = LAPPD_PPS.at(final_i) % 1000;
-        double driftScaling = LAPPD_PPS_ns / trueInterval / 1000; // this is the same drift scaling as in the matching loop
+        double driftScaling = static_cast<double>(LAPPD_PPS_ns) / (trueInterval / 1000); // this is the same drift scaling as in the matching loop
         ULong64_t totalDriftedClock = static_cast<ULong64_t>(drift * driftScaling / 1000);
+        cout<<fixed<<"Found CTCPPS as "<<CTCPPS.at(final_j)<<", LAPPD_PPS_ns = "<<LAPPD_PPS_ns;
         final_offset_ns = CTCPPS.at(final_j) - (LAPPD_PPS_ns + totalDriftedClock);
         final_offset_ps_negative = LAPPD_PPS_truncated_ps; // this is useless if there is a drift though.
+        cout<<" final_offset_ns = "<<final_offset_ns<<", driftScaling = "<<driftScaling<<", totalDriftedClock_ns = "<<totalDriftedClock<<endl;
     }
     /*
     cout << "******* Fit Finished *******" << endl;
@@ -389,6 +407,9 @@ vector<vector<ULong64_t>> fitInThisReset(
     vector<ULong64_t> TS_PPSAfter;
     vector<ULong64_t> TS_PPSDiff;
     vector<ULong64_t> TS_PPSMiss;
+
+    vector<ULong64_t> TS_driftCorrection_ns;
+    vector<ULong64_t> BG_driftCorrection_ns;
 
     // calculate the missing ticks for each LAPPD PPS
     PPS_tick_correction.push_back(0);
@@ -490,13 +511,17 @@ vector<vector<ULong64_t>> fitInThisReset(
         ULong64_t driftCorrectionForBG = 0;
         if (drift != 0)
         {
-            double driftScaling = TS_ns / trueInterval / 1000;
-            driftCorrectionForTS = static_cast<ULong64_t>(drift * driftScaling / 1000);
-            double driftScalingBG = BG_ns / trueInterval / 1000;
-            driftCorrectionForBG = static_cast<ULong64_t>(drift * driftScalingBG / 1000);
+            
+            double driftScaling = static_cast<double>(TS_ns) / (trueInterval / 1000);
+            driftCorrectionForTS = static_cast<ULong64_t>(drift/ 1000 * driftScaling );
+            double driftScalingBG = static_cast<double>(BG_ns) / (trueInterval / 1000);
+            driftCorrectionForBG = static_cast<ULong64_t>(drift/ 1000 * driftScalingBG );
+            cout<<"drift = "<<drift<<", driftScaling = "<<driftScaling<<", driftCorrectionForTS = "<<driftCorrectionForTS<<", driftCorrectionForBG = "<<driftCorrectionForBG<<endl;
+            cout<<"driftCorrectionForTS = "<<driftCorrectionForTS<<", driftCorrectionForBG = "<<driftCorrectionForBG<<endl;
         }
         ULong64_t DriftCorrectedTS_ns = TS_ns + final_offset_ns + driftCorrectionForTS;
         ULong64_t DriftCorrectedBG_ns = BG_ns + final_offset_ns + driftCorrectionForBG;
+        cout<<"DriftCorrectedTS_ns = "<<DriftCorrectedTS_ns<<" =: final_offset_ns = "<<final_offset_ns<<" + driftCorrectionForTS = "<<driftCorrectionForTS<<" + TS_ns = "<<TS_ns<<endl;
         ULong64_t min_mean_dev_match = std::numeric_limits<ULong64_t>::max();
         int matchedIndex = 0;
         for (int c = 0; c < CTCTrigger.size(); c++)
@@ -699,6 +724,9 @@ vector<vector<ULong64_t>> fitInThisReset(
         TS_PPSAfter.push_back(TS_PPSAfter_tick);
         TS_PPSDiff.push_back(TS_PPSDiff_tick);
         TS_PPSMiss.push_back(TS_PPSMissing_tick);
+
+        TS_driftCorrection_ns.push_back(driftCorrectionForTS);
+        BG_driftCorrection_ns.push_back(driftCorrectionForBG);
     }
     ULong64_t totalEventNumber = LAPPDDataTimeStampUL.size();
     ULong64_t gotOrphanCount_out = gotOrphanCount;
@@ -711,7 +739,7 @@ vector<vector<ULong64_t>> fitInThisReset(
 
     vector<ULong64_t> FitInfo = {final_offset_ns, final_offset_ps_negative, gotOrphanCount_out, gotMin_mean_dev_noOrphan_out, increament_times_out, min_mean_dev_out, final_i_out, final_j_out, totalEventNumber, drift_out};
 
-    vector<vector<ULong64_t>> Result = {FitInfo, TimeStampRaw, BeamGateRaw, TimeStamp_ns, BeamGate_ns, TimeStamp_ps, BeamGate_ps, EventIndex, EventDeviation_ns, CTCTriggerIndex, CTCTriggerTimeStamp_ns, BeamGate_correction_tick, TimeStamp_correction_tick, LAPPD_PPS_interval_ticks, BG_PPSBefore, BG_PPSAfter, BG_PPSDiff, BG_PPSMiss, TS_PPSBefore, TS_PPSAfter, TS_PPSDiff, TS_PPSMiss};
+    vector<vector<ULong64_t>> Result = {FitInfo, TimeStampRaw, BeamGateRaw, TimeStamp_ns, BeamGate_ns, TimeStamp_ps, BeamGate_ps, EventIndex, EventDeviation_ns, CTCTriggerIndex, CTCTriggerTimeStamp_ns, BeamGate_correction_tick, TimeStamp_correction_tick, LAPPD_PPS_interval_ticks, BG_PPSBefore, BG_PPSAfter, BG_PPSDiff, BG_PPSMiss, TS_PPSBefore, TS_PPSAfter, TS_PPSDiff, TS_PPSMiss, TS_driftCorrection_ns, BG_driftCorrection_ns};
     return Result;
 }
 
@@ -1088,6 +1116,8 @@ void offsetFit_MultipleLAPPD(string fileName, int fitTargetTriggerWord, bool tri
     ULong64_t final_offset_ns_1;
     ULong64_t final_offset_ps_negative_0;
     ULong64_t final_offset_ps_negative_1;
+    double drift0;
+    double drift1;
     ULong64_t gotOrphanCount_0;
     ULong64_t gotOrphanCount_1;
     ULong64_t gotMin_mean_dev_noOrphan_0;
@@ -1118,6 +1148,10 @@ void offsetFit_MultipleLAPPD(string fileName, int fitTargetTriggerWord, bool tri
     ULong64_t TS_PPSAfter_tick;
     ULong64_t TS_PPSDiff_tick;
     ULong64_t TS_PPSMissing_tick;
+
+    ULong64_t TS_driftCorrection_ns;
+    ULong64_t BG_driftCorrection_ns;
+
     tOut->Branch("runNumber", &runNumber_out, "runNumber/I");
     tOut->Branch("subRunNumber", &subRunNumber_out, "subRunNumber/I");
     tOut->Branch("partFileNumber", &partFileNumber_out, "partFileNumber/I");
@@ -1128,6 +1162,8 @@ void offsetFit_MultipleLAPPD(string fileName, int fitTargetTriggerWord, bool tri
     tOut->Branch("final_offset_ns_1", &final_offset_ns_1, "final_offset_ns_1/l");
     tOut->Branch("final_offset_ps_negative_0", &final_offset_ps_negative_0, "final_offset_ps_negative_0/l");
     tOut->Branch("final_offset_ps_negative_1", &final_offset_ps_negative_1, "final_offset_ps_negative_1/l");
+    tOut->Branch("drift0", &drift0, "drift0/D");
+    tOut->Branch("drift1", &drift1, "drift1/D");
     tOut->Branch("gotOrphanCount_0", &gotOrphanCount_0, "gotOrphanCount_0/l");
     tOut->Branch("gotOrphanCount_1", &gotOrphanCount_1, "gotOrphanCount_1/l");
     tOut->Branch("gotMin_mean_dev_noOrphan_0", &gotMin_mean_dev_noOrphan_0, "gotMin_mean_dev_noOrphan_0/l");
@@ -1158,6 +1194,9 @@ void offsetFit_MultipleLAPPD(string fileName, int fitTargetTriggerWord, bool tri
     tOut->Branch("TS_PPSAfter_tick", &TS_PPSAfter_tick, "TS_PPSAfter_tick/l");
     tOut->Branch("TS_PPSDiff_tick", &TS_PPSDiff_tick, "TS_PPSDiff_tick/l");
     tOut->Branch("TS_PPSMissing_tick", &TS_PPSMissing_tick, "TS_PPSMissing_tick/l");
+    tOut->Branch("TS_driftCorrection_ns", &TS_driftCorrection_ns, "TS_driftCorrection_ns/l");
+    tOut->Branch("BG_driftCorrection_ns", &BG_driftCorrection_ns, "BG_driftCorrection_ns/l");
+    
     std::ofstream outputEvents("outputEvents.txt");
     for (auto it = ResultMap.begin(); it != ResultMap.end(); it++)
     {
@@ -1172,18 +1211,20 @@ void offsetFit_MultipleLAPPD(string fileName, int fitTargetTriggerWord, bool tri
         partFileNumber_out = std::stoi(key.substr(key.find("_", key.find("_") + 1) + 1, key.find("_", key.find("_", key.find("_") + 1) + 1) - key.find("_", key.find("_") + 1) - 1));
         LAPPD_ID_out = std::stoi(key.substr(key.find("_", key.find("_", key.find("_") + 1) + 1) + 1, key.size() - key.find("_", key.find("_", key.find("_") + 1) + 1) - 1));
         final_offset_ns_0 = Result[0][0];
-        final_offset_ns_1 = Result[22][0];
+        final_offset_ns_1 = Result[24][0];
         final_offset_ps_negative_0 = Result[0][1];
-        final_offset_ps_negative_1 = Result[22][1];
+        final_offset_ps_negative_1 = Result[24][1];
         gotOrphanCount_0 = Result[0][2];
-        gotOrphanCount_1 = Result[22][2];
+        gotOrphanCount_1 = Result[24][2];
         gotMin_mean_dev_noOrphan_0 = Result[0][3];
-        gotMin_mean_dev_noOrphan_1 = Result[22][3];
+        gotMin_mean_dev_noOrphan_1 = Result[24][3];
         increament_times_0 = Result[0][4];
-        increament_times_1 = Result[22][4];
+        increament_times_1 = Result[24][4];
         min_mean_dev_0 = Result[0][5];
-        min_mean_dev_1 = Result[22][5];
+        min_mean_dev_1 = Result[24][5];
         EventNumberInThisPartFile = Result[0][8];
+        drift0 = Result[0][9];
+        drift1 = Result[24][9];
 
         //                                      0           1           2           3           4               5               6           7           8                    9           10                     11                          12                          13                      14              15          16          17          18          19              20          21
         // vector<vector<ULong64_t>> Result = {FitInfo, TimeStampRaw, BeamGateRaw, TimeStamp_ns, BeamGate_ns, TimeStamp_ps, BeamGate_ps, EventIndex, EventDeviation_ns, CTCTriggerIndex, CTCTriggerTimeStamp_ns, BeamGate_correction_tick, TimeStamp_correction_tick, LAPPD_PPS_interval_ticks, BG_PPSBefore, BG_PPSAfter, BG_PPSDiff, BG_PPSMiss, TS_PPSBefore, TS_PPSAfter, TS_PPSDiff, TS_PPSMiss};
@@ -1193,7 +1234,7 @@ void offsetFit_MultipleLAPPD(string fileName, int fitTargetTriggerWord, bool tri
             long long BGTdiff = Result[4][j] - Result[10][j] - 325250;
             // cout<<"BGTDiff: "<<BGTdiff<<endl;
             // cout<<"Saving BeamGate_ns = "<<Result[4][j]<<", CTCTriggerTimeStamp_ns = "<<Result[10][j]<<", with BG-T-325250= "<<BGTdiff<<", at partFileNumber "<<partFileNumber_out<<", EventIndex = "<<Result[7][j]<<", j = "<<j<<endl;
-            outputEvents << fixed << Result[3][j] << " " << Result[5][j] << " " << Result[4][j] << " " << Result[6][j] << " " << Result[10][j] << " " << BGTdiff << " " << partFileNumber_out << " " << Result[7][j] << " " << Result[11][j] << " " << Result[12][j] << " " << Result[13][j] << std::endl;
+            outputEvents << fixed << Result[3][j] << " " << Result[5][j] << " " << Result[4][j] << " " << Result[6][j] << " " << Result[10][j] << " " << BGTdiff << " " << partFileNumber_out << " " << Result[7][j] << " " << Result[11][j] << " " << Result[12][j] << " " << Result[13][j] << " " << Result[22][j] << " " << Result[23][j] << endl;
             EventIndex = Result[7][j];
             TimeStampRaw = Result[1][j];
             BeamGateRaw = Result[2][j];
@@ -1217,6 +1258,8 @@ void offsetFit_MultipleLAPPD(string fileName, int fitTargetTriggerWord, bool tri
             TS_PPSAfter_tick = Result[19][j];
             TS_PPSDiff_tick = Result[20][j];
             TS_PPSMissing_tick = Result[21][j];
+            TS_driftCorrection_ns = Result[22][j];
+            BG_driftCorrection_ns = Result[23][j];
             tOut->Fill();
         }
         outputOffset << runNumber_out << "\t" << subRunNumber_out << "\t" << partFileNumber_out << "\t" << 0 << "\t" << LAPPD_ID_out << "\t" << final_offset_ns_0 << "\t" << final_offset_ns_1 << "\t" << final_offset_ps_negative_0 << "\t" << final_offset_ps_negative_1 << "\t" << gotOrphanCount_0 << "\t" << gotOrphanCount_1 << "\t" << EventNumberInThisPartFile << "\t" << gotMin_mean_dev_noOrphan_0 << "\t" << gotMin_mean_dev_noOrphan_1 << "\t" << increament_times_0 << "\t" << increament_times_1 << "\t" << min_mean_dev_0 << "\t" << min_mean_dev_1 << std::endl;

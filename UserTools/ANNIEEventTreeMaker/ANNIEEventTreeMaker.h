@@ -303,13 +303,16 @@ private:
     // MRD cluster information
     ULong64_t fEventTimeMRD_Tree;
     int fMRDClusterNumber;
-    int fMRDClusterHits;
-    double fMRDClusterTime;
-    double fMRDClusterTimeSigma;
+    std::vector<int> fMRDClusterHitNumber;
+    std::vector<double> fMRDClusterTime;
+    std::vector<double> fMRDClusterTimeSigma;
 
     // MRDHitInfo_fill
     int fVetoHit;
+    std::vector<int> fMRDHitClusterIndex;
     std::vector<double> fMRDHitT;
+    std::vector<double> fMRDHitCharge;
+    std::vector<int> fMRDHitDigitPMT;
     std::vector<int> fMRDHitDetID;
     std::vector<int> fMRDHitChankey;
     std::vector<int> fMRDHitChankeyMC;

@@ -192,3 +192,4 @@
 #include "ProcessedLAPPDFilter.h"
 #include "BeamQuality.h"
 #include "FitRWMWaveform.h"
+#include "LAPPDLoadTXT.h"

@@ -296,7 +296,9 @@ bool LAPPDPlots::Execute()
       if (!drawTriggerChannel)
         nstrips = 28;
       const double BinHistMinConst = BinHistMin;
-      const double BinHistMaxConst = BinHistMax;
+      //cout<<"min is "<<BinHistMin<<", "<<BinHistMinConst<<endl;
+      const int BinHistMaxConst = BinHistMax;
+      //cout<<"max is "<<BinHistMax<<", "<<BinHistMaxConst<<endl;
       const int BinHistNumberConst = BinHistNumber;
       TH2D *h = new TH2D(HistoName, HistoName, BinHistNumberConst, BinHistMinConst, BinHistMaxConst, nstrips, 0 - 0.5, nstrips - 0.5);
       if (LAPPDPlotsVerbosity > 3)

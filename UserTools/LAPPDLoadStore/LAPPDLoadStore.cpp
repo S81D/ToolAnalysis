@@ -1513,6 +1513,8 @@ void LAPPDLoadStore::LoadOffsetsAndCorrections()
     ULong64_t TS_PPSAfter_tick;
     ULong64_t TS_PPSDiff_tick;
     ULong64_t TS_PPSMissing_tick;
+    ULong64_t TS_driftCorrection_ns;
+    ULong64_t BG_driftCorrection_ns;
 
     tree->SetBranchAddress("runNumber", &runNumber);
     tree->SetBranchAddress("subRunNumber", &subRunNumber);
@@ -1531,6 +1533,9 @@ void LAPPDLoadStore::LoadOffsetsAndCorrections()
     tree->SetBranchAddress("TS_PPSAfter_tick", &TS_PPSAfter_tick);
     tree->SetBranchAddress("TS_PPSDiff_tick", &TS_PPSDiff_tick);
     tree->SetBranchAddress("TS_PPSMissing_tick", &TS_PPSMissing_tick);
+    tree->SetBranchAddress("TS_driftCorrection_ns", &TS_driftCorrection_ns);
+    tree->SetBranchAddress("BG_driftCorrection_ns", &BG_driftCorrection_ns);
+
 
     Long64_t nentries = tree->GetEntries();
     cout << "LAPPDStoreReadIn Loading offsets and corrections, total entries: " << nentries << endl;
@@ -1558,7 +1563,7 @@ void LAPPDLoadStore::LoadOffsetsAndCorrections()
         }
 
         // Now using EventIndex to place each event correctly
-        Offsets[key][EventIndex] = final_offset_ns_0;
+        Offsets[key][EventIndex] = final_offset_ns_0 + TS_driftCorrection_ns;
         Offsets_minus_ps[key][EventIndex] = static_cast<int>(final_offset_ps_negative_0);
         BGCorrections[key][EventIndex] = static_cast<int>(BGCorrection_tick) - 1000;
         TSCorrections[key][EventIndex] = static_cast<int>(TSCorrection_tick) - 1000;
@@ -1575,7 +1580,7 @@ void LAPPDLoadStore::LoadOffsetsAndCorrections()
         if (nentries > 10 && i % (static_cast<int>(nentries / 10)) == 0)
         {
             cout << "LAPPDStoreReadIn Loading offsets and corrections, " << i << " entries loaded" << endl;
-            cout << "Printing key: " << key << ", EventIndex: " << EventIndex << ", final_offset_ns_0: " << final_offset_ns_0 << ", final_offset_ps_negative_0: " << final_offset_ps_negative_0 << ", BGCorrection_tick: " << BGCorrection_tick << ", TSCorrection_tick: " << TSCorrection_tick << ", BG_PPSMissing_tick: " << BG_PPSMissing_tick << ", TS_PPSMissing_tick: " << TS_PPSMissing_tick << endl;
+            cout << "Printing key: " << key << ", EventIndex: " << EventIndex << ", final_offset_ns_0: " << final_offset_ns_0 << ", final_offset_ps_negative_0: " << final_offset_ps_negative_0 << ", BGCorrection_tick: " << BGCorrection_tick << ", TSCorrection_tick: " << TSCorrection_tick << ", BG_PPSMissing_tick: " << BG_PPSMissing_tick << ", TS_PPSMissing_tick: " << TS_PPSMissing_tick << ", TS_driftCorrection_ns: " << TS_driftCorrection_ns << ", BG_driftCorrection_ns: " << BG_driftCorrection_ns << endl;
         }
     }
 
