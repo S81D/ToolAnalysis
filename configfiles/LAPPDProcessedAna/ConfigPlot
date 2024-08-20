@@ -80,7 +80,7 @@ useMaxTime 1  # 1: use max bin as pulse time, 0: use gaus fit bin as pulse peak 
 #signalSpeedOnStrip 0.6667
 signalSpeedOnStrip 0.567 #1.69982/2.99792
 triggerBoardDelay 0
-loadPrintMRDinfo 1
+loadPrintMRDinfo 0
 useRange 0   #set this to 0 for using pulse start time as the saved pulse time, 1 for high, -1 for using peak time
 plusClockBit 0
 
