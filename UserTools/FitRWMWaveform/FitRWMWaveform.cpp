@@ -86,6 +86,7 @@ bool FitRWMWaveform::Finalise()
         hRWM->SetBinContent(i + 1, val[i]); // Note the 1-based index
       }
       hRWM->Write();
+      delete hRWM;
       RWMCount++;
     }
 
@@ -100,10 +101,12 @@ bool FitRWMWaveform::Finalise()
         hBRF->SetBinContent(i + 1, val[i]); // Note the 1-based index
       }
       hBRF->Write();
+      delete hBRF;
       BRFCount++;
     }
 
     fOutput_tfile->Close();
+    delete fOutput_tfile;
   }
 
   return true;
