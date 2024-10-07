@@ -163,7 +163,7 @@ bool LoadRawData::Execute(){
   }
 
   //If more MRD events than VME events abort
-  if (mrdtotalentries > tanktotalentries && BuildType != "MRD"){
+  if (mrdtotalentries > tanktotalentries && BuildType != "MRD" && BuildType != "MRDAndCTC"){
     std::cout << "LoadRawData tool ERROR: More MRD entries than VME entries! Stopping toolchain" << std::endl;
     m_data->vars.Set("StopLoop",1);
   }
