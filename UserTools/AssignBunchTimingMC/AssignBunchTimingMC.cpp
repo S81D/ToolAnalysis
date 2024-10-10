@@ -119,7 +119,7 @@ bool AssignBunchTimingMC::Execute()
     }
 
     // send to store
-    m_data->Stores.at("ANNIEEvent")->Set("bunchTimes", &fbunchTimes);
+    m_data->Stores.at("ANNIEEvent")->Set("bunchTimes", fbunchTimes);
 
     return true;
     
