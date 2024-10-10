@@ -76,6 +76,7 @@ class PhaseIITreeMaker: public Tool {
   void LoadTankClusterHits(std::vector<Hit> cluster_hits);
   void LoadTankClusterHitsMC(std::vector<MCHit> cluster_hits,std::vector<unsigned long> cluster_detkeys);
   bool LoadTankClusterClassifiers(double cluster_time);
+  bool LoadBNBtimingMC(double cluster_time);
   void LoadAllTankHits(bool IsData);
   void LoadSiPMHits();
   
@@ -85,6 +86,7 @@ class PhaseIITreeMaker: public Tool {
   //General variables
   bool isData;
   bool hasGenie;
+  bool hasBNBtimingMC;
 
   std::map<int,std::string>* AuxChannelNumToTypeMap;
   std::map<int,double> ChannelKeyToSPEMap;
@@ -205,6 +207,10 @@ class PhaseIITreeMaker: public Tool {
   double fClusterChargeBalance;
   std::vector<int> fADCWaveformChankeys; 
   std::vector<int> fADCWaveformSamples;  
+
+  // ************** MC BNB Spill Structure ************* //
+  std::map<double,double> bunchTimes;
+  double fbunchTimes;
 
   // ************ Muon reconstruction level information ******** //
   std::string MRDTriggertype;

@@ -13,10 +13,12 @@ bool PhaseIITreeMaker::Initialise(std::string configfile, DataModel &data){
   /////////////////////////////////////////////////////////////////
   
   hasGenie = false;
+  hasBNBtimingMC = false;
 
   m_variables.Get("verbose", verbosity);
   m_variables.Get("IsData",isData);
   m_variables.Get("HasGenie",hasGenie);
+  m_variables.Get("HasBNBtimingMC",hasBNBtimingMC);
   m_variables.Get("TankHitInfo_fill", TankHitInfo_fill);
   m_variables.Get("MRDHitInfo_fill", MRDHitInfo_fill);
   m_variables.Get("fillCleanEventsOnly", fillCleanEventsOnly);
@@ -106,7 +108,10 @@ bool PhaseIITreeMaker::Initialise(std::string configfile, DataModel &data){
       fPhaseIITankClusterTree->Branch("SiPM1NPulses",&fSiPM1NPulses,"SiPM1NPulses/I");
       fPhaseIITankClusterTree->Branch("SiPM2NPulses",&fSiPM2NPulses,"SiPM2NPulses/I");
     }
-
+    // MC BNB spill structure timing - AssignBunchTimingMC tool
+    if(hasBNBtimingMC){
+      fPhaseIITankClusterTree->Branch("bunchTimes",&fbunchTimes,"bunchTimes/D");
+    }
   } 
 
   if(MRDClusterProcessing){
@@ -638,6 +643,10 @@ bool PhaseIITreeMaker::Execute(){
         if(!good_class){
           if(verbosity>3) Log("PhaseIITreeMaker Tool: No cluster classifiers.  Continuing tree",v_debug,verbosity);
         }
+        bool good_bunch = this->LoadBNBtimingMC(it_cluster_pair_mc->first);
+        if(!good_bunch){
+          if(verbosity>v_debug) Log("PhaseIITreeMaker Tool: BNB timing (MC). Continuing tree",v_debug,verbosity);
+        }
       }
 
       if(SiPMPulseInfo_fill) this->LoadSiPMHits();
@@ -952,6 +961,10 @@ void PhaseIITreeMaker::ResetVariables() {
     fSiPMNum.clear();
   }
 
+  if(hasBNBtimingMC){
+      fbunchTimes = -9999;
+  }
+
   if(TankClusterProcessing){
     fClusterMaxPE = -9999;
     fClusterChargePointX = -9999;
@@ -1223,6 +1236,18 @@ bool PhaseIITreeMaker::LoadTankClusterClassifiers(double cluster_time){
     fClusterChargeBalance = ClusterChargeBalances.at(cluster_time);
   }
   return good_classifiers;
+}
+
+bool PhaseIITreeMaker::LoadBNBtimingMC(double cluster_time){
+  Log("PhaseITreeMaker tool: Getting BNB timing (MC)", v_debug, verbosity);
+  bool got_bnb_times = m_data->Stores.at("ANNIEEvent")->Get("bunchTimes", bunchTimes);
+  if(!got_bnb_times){
+    Log("PhaseITreeMaker tool: BNB timing (MC) not found!", v_debug, verbosity);
+  } else { 
+    Log("PhaseITreeMaker tool: Setting fbunchTimes variables", v_debug, verbosity);
+    fbunchTimes = bunchTimes.at(cluster_time);
+  }
+  return got_bnb_times;
 }
 
 void PhaseIITreeMaker::LoadTankClusterHits(std::vector<Hit> cluster_hits){
