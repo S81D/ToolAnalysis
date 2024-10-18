@@ -169,5 +169,6 @@ if (tool=="PlotsTrackLengthAndEnergy") ret=new PlotsTrackLengthAndEnergy;
 if (tool=="SaveConfigInfo") ret=new SaveConfigInfo;
 if (tool=="ReadConfigInfo") ret=new ReadConfigInfo;
 if (tool=="BackTracker") ret=new BackTracker;
+if (tool=="PrintDQ") ret=new PrintDQ;
 return ret;
 }
