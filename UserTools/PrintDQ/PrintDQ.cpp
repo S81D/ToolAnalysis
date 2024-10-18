@@ -290,60 +290,60 @@ bool PrintDQ::LoadStores()
 
     bool get_run = m_data->Stores["ANNIEEvent"]->Get("RunNumber", fRunNumber);
     if (!get_run) {
-        Log("PrintDQ: RunNumber not found in the ANNIEEvent!", v_error, verbosity);
+        Log("PrintDQ: RunNumber not found in the ANNIEEvent!", v_debug, verbosity);
     }
 
     bool get_ext = m_data->Stores["ANNIEEvent"]->Get("TriggerExtended",fExtended);
     if (!get_ext) {
-        Log("PrintDQ: no Extended Variable in the ANNIEEvent!", v_error, verbosity);
+        Log("PrintDQ: no Extended Variable in the ANNIEEvent!", v_debug, verbosity);
     }
     
     bool get_ETT = m_data->Stores["ANNIEEvent"]->Get("EventTimeTank", fEventTimeTank);
     if (!get_ETT) {
-        Log("PrintDQ: no EventTimeTank in the ANNIEEvent!", v_error, verbosity);
+        Log("PrintDQ: no EventTimeTank in the ANNIEEvent!", v_debug, verbosity);
     }
 
     bool get_veto = m_data->Stores["RecoEvent"]->Get("NoVeto", fNoVeto);
     if (!get_veto) {
-        Log("PrintDQ: NoVeto not present in the RecoEvent!", v_error, verbosity);
+        Log("PrintDQ: NoVeto not present in the RecoEvent! Are you sure you ran the EventSelector tool?", v_debug, verbosity);
     }
 
     bool get_coinc = m_data->Stores["RecoEvent"]->Get("PMTMRDCoinc", fPMTMRDCoinc);
     if (!get_coinc) {
-        Log("PrintDQ: PMTMRDCoinc not present in the RecoEvent!", v_error, verbosity);
+        Log("PrintDQ: PMTMRDCoinc not present in the RecoEvent! Are you sure you ran the EventSelector tool?", v_debug, verbosity);
     }
 
     bool get_lappd = m_data->Stores["ANNIEEvent"]->Get("DataStreams", fDataStreams);
     if (!get_lappd) {
-        Log("PrintDQ: DataStreams (used for hasLAPPD) not present in the ANNIEEvent!", v_error, verbosity);
+        Log("PrintDQ: DataStreams (used for hasLAPPD) not present in the ANNIEEvent!", v_debug, verbosity);
     }
 
     bool get_BRF = m_data->Stores["ANNIEEvent"]->Get("BRFFirstPeakFit", fBRFFirstPeakFit);
     if (!get_BRF) {
-        Log("PrintDQ: BRFFirstPeakFit not present in the ANNIEEvent! Are you sure you ran the FitRWMWaveform tool?", v_error, verbosity);
+        Log("PrintDQ: BRFFirstPeakFit not present in the ANNIEEvent! Are you sure you ran the FitRWMWaveform tool?", v_debug, verbosity);
     }
 
     bool get_beam = m_data->Stores["ANNIEEvent"]->Get("beam_good", fBeamok);
     if (!get_beam) {
-        Log("PrintDQ: no beam_good in the ANNIEEvent!", v_error, verbosity);
+        Log("PrintDQ: no beam_good in the ANNIEEvent!", v_debug, verbosity);
     }
     
     // Grouped Triggers
     bool get_GT = m_data->Stores["ANNIEEvent"]->Get("GroupedTrigger", fGroupedTrigger);
     if (!get_GT) {
-        Log("PrintDQ: no GroupedTrigger in the ANNIEEvent!", v_error, verbosity);
+        Log("PrintDQ: no GroupedTrigger in the ANNIEEvent!", v_debug, verbosity);
     }
     
     // PMT clusters (need the ClusterFinder tool)
     bool get_Clusters = m_data->CStore.Get("ClusterMap", fClusterMap);
     if (!get_Clusters) {
-        Log("PrintDQ: no ClusterMap in the CStore! Did you run the ClusterFinder tool?", v_error, verbosity);
+        Log("PrintDQ: no ClusterMap in the CStore! Did you run the ClusterFinder tool?", v_debug, verbosity);
     }
 
     // MRD Tracks (TimeClustering and FindMRDTracks tools)
     bool get_mrdclusters = m_data->CStore.Get("MrdTimeClusters", fMrdTimeClusters);
     if (!get_mrdclusters) {
-        Log("PrintDQ: No MRD clusters found! Did you run the TimeClustering tool?", v_error, verbosity);
+        Log("PrintDQ: No MRD clusters found! Did you run the TimeClustering tool?", v_debug, verbosity);
     }
 
     return true;
