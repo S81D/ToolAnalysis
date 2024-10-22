@@ -945,7 +945,7 @@ std::vector<ADCPulse> PhaseIIADCHitFinder::find_pulses_bythreshold(
         // Store the freshly made pulse in the vector of found pulses
         pulses.emplace_back(channel_key,
           ( pulse_start_sample * NS_PER_ADC_SAMPLE )-timing_offset,
-          (peak_sample * NS_PER_ADC_SAMPLE)-timing_offset,
+          (hit_time * NS_PER_ADC_SAMPLE)-timing_offset,
           calibrated_minibuffer_data.GetBaseline(),
           calibrated_minibuffer_data.GetSigmaBaseline(),
           raw_area, max_ADC, calibrated_amplitude, charge);
