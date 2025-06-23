@@ -1,0 +1,6 @@
+verbosity 0
+UseMCHits 0
+BreakDist 0.05
+YSpacing 0.5
+NPlanarPoints 20
+Regularizer 10

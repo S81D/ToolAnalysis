@@ -23,7 +23,7 @@ class ADCPulse : public Hit {
     ADCPulse(int TubeId, double start_time, double peak_time,
       double baseline, double sigma_baseline, unsigned long raw_area,
       unsigned short raw_amplitude, double calibrated_amplitude,
-      double charge);
+      double charge, double stop_time = 0);
 
     // @brief Returns the start time (ns) of the pulse relative to the
     // start of its minibuffer
@@ -32,6 +32,10 @@ class ADCPulse : public Hit {
     // @brief Returns the peak time (ns) of the pulse relative to the
     // start of its minibuffer
     inline double peak_time() const { return peak_time_; }
+
+    // @brief Returns the stop time (ns) of the pulse relative to the
+    // start of its minibuffer
+    inline double stop_time() const { return stop_time_; }
 
     // @brief Returns the approximate baseline (ADC) used to calibrate the
     // pulse
@@ -71,16 +75,24 @@ class ADCPulse : public Hit {
       ar & raw_area_;
       ar & raw_amplitude_;
       ar & calibrated_amplitude_;
+      if (version > 0)
+	ar & stop_time_;
     }
 
   protected:
 
     double start_time_; // ns since beginning of minibuffer
     double peak_time_; // ns since beginning of minibuffer
+    double stop_time_; // ns since beginning of minibuffer
     double baseline_; // mean (ADC)
     double sigma_baseline_; // standard deviation (ADC)
     unsigned long raw_area_; // (ADC * samples)
 
     unsigned short raw_amplitude_; // ADC
     double calibrated_amplitude_; // V
+
 };
+
+// Need to increment the class version since we added time as a new variable
+// the version number ensures backward compatibility when serializing 
+BOOST_CLASS_VERSION(ADCPulse, 1)
