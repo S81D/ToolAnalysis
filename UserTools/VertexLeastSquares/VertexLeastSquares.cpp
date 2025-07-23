@@ -75,6 +75,17 @@ bool VertexLeastSquares::Initialise(std::string configfile, DataModel &data)
 //------------------------------------------------------------------------------
 bool VertexLeastSquares::Execute()
 {
+
+  // An upstream tool may opt to skip this execution stage
+  // For example the PMTWaveformSim tool will skip events with no MCHits or if
+  // no waveforms are produced.
+  bool skip = false;
+  bool got_skip_status = m_data->Stores["ANNIEEvent"]->Get("SkipExecute", skip);
+  if (got_skip_status && skip) {
+    Log("VertexLeastSquares: An upstream tool told me to skip this event.",v_warning,verbosity);
+    return true;
+  } 
+
   fVertexMap->clear();
   if (fUseMCHits) {
     bool gotClusters = m_data->CStore.Get("ClusterMapMC", fClusterMapMC);
@@ -252,7 +263,7 @@ void VertexLeastSquares::RunLoop()
     // We need at least 4 hits
     if (filt_hits.size() < 4) {
       std::cout << "Not enough hits. We only have: " << filt_hits.size() << std::endl;
-      fVertexMap->emplace(clusterpair.first, Position(-5, -5, -5));
+      fVertexMap->emplace(clusterpair.first, Position(-9, -9, -9));
       continue;
     }
     
@@ -330,11 +341,11 @@ void VertexLeastSquares::RunLoop()
       ++seednum;
     }// end loop over seed vertices
 
-    // Save the vertex if we have one, otherwise default to -5s
+    // Save the vertex if we have one, otherwise default to 9s
     if (bestVtxs.size())
       fVertexMap->emplace(clusterpair.first, bestVtxs[bestIdx]);
     else
-      fVertexMap->emplace(clusterpair.first, Position(-5, -5, -5));
+      fVertexMap->emplace(clusterpair.first, Position(-9, -9, -9));
   }// end loop over the clusters
 }
 
@@ -348,7 +359,7 @@ void VertexLeastSquares::RunLoopMC()
     // We need at least 4 hits
     if (filt_hits.size() < 4) {
       std::cout << "Not enough hits. We only have: " << filt_hits.size() << std::endl;
-      fVertexMap->emplace(clusterpair.first, Position(-5, -5, -5));
+      fVertexMap->emplace(clusterpair.first, Position(-9, -9, -9));
       continue;
     }
 
@@ -426,13 +437,13 @@ void VertexLeastSquares::RunLoopMC()
       ++seednum;
     }// end loop over seed vertices
 
-    // Save the vertex if we have one, otherwise default to -5s
+    // Save the vertex if we have one, otherwise default to -9s
     if (bestVtxs.size()) {      
       fVertexMap->emplace(clusterpair.first, bestVtxs[bestIdx]);
     }
     else {
       std::cout << "No good vertex found!!" << std::endl;
-      fVertexMap->emplace(clusterpair.first, Position(-5, -5, -5));
+      fVertexMap->emplace(clusterpair.first, Position(-9, -9, -9));
     }
   }// end loop over the clusters
 }
