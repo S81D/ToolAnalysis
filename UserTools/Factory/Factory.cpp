@@ -176,5 +176,6 @@ if (tool=="AssignBunchTimingMC") ret=new AssignBunchTimingMC;
 if (tool=="FitRWMWaveform") ret=new FitRWMWaveform;
 if (tool=="PMTWaveformSim") ret=new PMTWaveformSim;
 if (tool=="VertexLeastSquares") ret=new VertexLeastSquares;
+if (tool=="LoadNUISANCEEvent") ret=new LoadNUISANCEEvent;
 return ret;
 }
