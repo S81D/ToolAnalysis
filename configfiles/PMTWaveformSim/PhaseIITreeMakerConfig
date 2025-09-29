@@ -14,6 +14,7 @@ TankReco_fill 0
 RecoDebug_fill 0
 muonTruthRecoDiff_fill 0
 IsData 0
+IntGen 1          # Interaction generator: 0 for data, 1 for GENIE, 2 for NUISANCE
 PMTWaveformSim 1
 HasGenie 0
 VertexLeastSquares 0
