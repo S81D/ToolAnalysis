@@ -17,11 +17,10 @@
 /**
  * \class VertexLeastSquares
  *
- * This is a blank template for a Tool used by the script to generate a new custom tool. Please fill out the description and author information.
 *
-* $Author: B.Richards $
-* $Date: 2019/05/28 10:44:00 $
-* Contact: b.richards@qmul.ac.uk
+* $Author(s): S.Doran + A.Sutton$
+* $Date: 2025/09/26 00:00:00 $
+* Contact: doran@iastate.edu
 */
 class VertexLeastSquares: public Tool {
 
@@ -56,23 +55,35 @@ class VertexLeastSquares: public Tool {
  private:
 
   // Configuration parameters
-  //std::string fClusterMapName;
   bool fUseMCHits;
   double fBreakDist;
   bool fDebugTree;
   double fYSpacing;
   int fNPlanarPoints;
   double fRegularizer;
+  int fFittingSteps;
+  bool fExternalSeeding;
+  double fYBuffer;
+  double fRadialBuffer;
+  double fExternalVertexMaxRadius;
+  double fExternalVertexMaxHeight;
+  bool fCompatibleHits;
+  bool fGoodTimes;
+  double fMinGoodTime;
 
   // The ANNIE geometry service
   Geometry *fGeom = nullptr;
+
+  // timing uncertainty map
+  std::map<unsigned long, double>* ChannelKeyToTimingSigmaMap;
 
   // The clusters we'll load from the CStore
   std::map<double, std::vector<Hit>>   *fClusterMap   = nullptr;
   std::map<double, std::vector<MCHit>> *fClusterMapMC = nullptr;
 
-  // Vertices we'll save to the ANNIEEvent
+  // Vertices and stdev we'll save to the ANNIEEvent
   std::map<double, Position> *fVertexMap = nullptr;
+  std::map<double, double> *fVertexStdevMap = nullptr;
 
   // The number of boundary points for the XZ plane verticies
   int fNBoundary;
