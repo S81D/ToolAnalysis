@@ -184,3 +184,4 @@
 #include "FitRWMWaveform.h"
 #include "PMTWaveformSim.h"
 #include "VertexLeastSquares.h"
+#include "LoadNUISANCEEvent.h"
