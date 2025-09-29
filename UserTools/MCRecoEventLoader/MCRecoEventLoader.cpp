@@ -16,7 +16,7 @@ bool MCRecoEventLoader::Initialise(std::string configfile, DataModel &data){
   fGetPiKInfo = 1;
   fGetNRings = 1;
   fParticleID = 13;
-  fDoParticleSelection = 1;
+  fFollowerCheck = 0;
   xshift = 0.;
   yshift = 14.46469;
   zshift = -168.1;
@@ -25,8 +25,8 @@ bool MCRecoEventLoader::Initialise(std::string configfile, DataModel &data){
   m_variables.Get("verbosity",verbosity);
   m_variables.Get("GetPionKaonInfo", fGetPiKInfo);
   m_variables.Get("GetNRings",fGetNRings);
-  m_variables.Get("DoParticleSelection",fDoParticleSelection);
   m_variables.Get("ParticleID", fParticleID);
+  m_variables.Get("FollowerCheck", fFollowerCheck);
   m_variables.Get("xshift", xshift);
   m_variables.Get("yshift", yshift);
   m_variables.Get("zshift", zshift);
@@ -77,21 +77,14 @@ bool MCRecoEventLoader::Execute(){
     return false;
   }
 
-
   ///Get MC Particle information
   this->FindTrueVertexFromMC();
-  this->FindParticlePdgs();
   if (fGetPiKInfo) this->FindPionKaonCountFromMC();
+  if (fFollowerCheck) this->FindFollowersFromMC();
   
   this->PushIBDInfo();
 
-  this->PushTrueVertex(true);
-  this->PushTrueStopVertex(true);
-  this->PushTrueMuonEnergy(TrueMuonEnergy);
   //std::cout <<"MCRecoEventLoader: Pushing true muon energy "<<TrueMuonEnergy<<std::endl;
-  this->PushTrueWaterTrackLength(WaterTrackLength);
-  this->PushTrueMRDTrackLength(MRDTrackLength);
-  this->PushProjectedMrdHit(projectedmrdhit);
 
   return true;
 }
@@ -118,7 +111,7 @@ void MCRecoEventLoader::FindTrueVertexFromMC() {
   
   // loop over the MCParticles to find the highest enery primary muon
   // MCParticles is a std::vector<MCParticle>
-  MCParticle primarymuon;  // primary muon
+  MCParticle primarylepton;  // primary lepton
   bool mufound=false;
   if(fMCParticles){
     Log("MCRecoEventLoader::  Tool: Num MCParticles = "+to_string(fMCParticles->size()),v_message,verbosity);
@@ -126,43 +119,36 @@ void MCRecoEventLoader::FindTrueVertexFromMC() {
       MCParticle aparticle = fMCParticles->at(particlei);
       //if(v_debug<verbosity) aparticle.Print();       // print if we're being *really* verbose
       if(aparticle.GetParentPdg()!=0) continue;      // not a primary particle
-      if (fDoParticleSelection){
-        if(aparticle.GetPdgCode()!=fParticleID) continue;       // not a muon
-        primarymuon = aparticle;                       // note the particle
-        mufound=true;                                  // note that we found it
-        m_data->Stores.at("RecoEvent")->Set("PdgPrimary",fParticleID);  //save the primary particle pdg code to the RecoEvent store
-        break;                                         // won't have more than one primary muon
-      } else {
-	//Accept both electrons and muons as primary particles, if no selection is specified
-        if( fabs(aparticle.GetPdgCode())!=11 && fabs(aparticle.GetPdgCode())!=13) continue;
-	primarymuon = aparticle;
-	mufound=true;
-	m_data->Stores.at("RecoEvent")->Set("PdgPrimary",aparticle.GetPdgCode());
-	break;
-      }
+      if(aparticle.GetPdgCode()==1000080160) continue;     // skip target nuclei
+      //Accept both electrons and muons as primary particles, if no selection is specified
+      if( fabs(aparticle.GetPdgCode())!=11 && fabs(aparticle.GetPdgCode())!=13 && fabs(aparticle.GetPdgCode())!=12 && fabs(aparticle.GetPdgCode())!=14) continue;
+      primarylepton = aparticle;
+      if( fabs(aparticle.GetPdgCode())==13) mufound=true;
+      m_data->Stores.at("RecoEvent")->Set("PdgPrimary",aparticle.GetPdgCode());
+      break;
     }
   } else {
     Log("MCRecoEventLoader::  Tool: No MCParticles in the event!",v_error,verbosity);
   }
-  if(not mufound){
-    Log("MCRecoEventLoader::  Tool: No muon in this event",v_warning,verbosity);
-    return;
-  }
   
   // retrieve desired information from the particle
-  Position muonstartpos = primarymuon.GetStartVertex();    // only true if the muon is primary
-  double muonstarttime = primarymuon.GetStartTime();
-  Position muonstoppos = primarymuon.GetStopVertex();    // only true if the muon is primary
-  double muonstoptime = primarymuon.GetStopTime();
-  Direction muondirection = primarymuon.GetStartDirection();
-  
-  TrueMuonEnergy = primarymuon.GetStartEnergy();
-   //std::cout <<"MCRecoEventLoader: FindTrueVertexFromMC: TrueEnergy: "<<TrueMuonEnergy<<std::endl;
+  Position muonstartpos = primarylepton.GetStartVertex();    // only true if the muon is primary
+  double muonstarttime = primarylepton.GetStartTime();
+  Position muonstoppos = primarylepton.GetStopVertex();    // only true if the muon is primary
+  double muonstoptime = primarylepton.GetStopTime();
+  Direction muondirection = primarylepton.GetStartDirection();
 
-  // MCParticleProperties tool fills in MRD track in m, but
-  // Water track in cm...
-  MRDTrackLength = primarymuon.GetTrackLengthInMrd()*100.;
-  WaterTrackLength = primarymuon.GetTrackLengthInTank();
+  if(mufound){ 
+    TrueMuonEnergy = primarylepton.GetStartEnergy();
+    // MCParticleProperties tool fills in MRD track in m, but
+    // Water track in cm...
+    MRDTrackLength = primarylepton.GetTrackLengthInMrd()*100.;
+    WaterTrackLength = primarylepton.GetTrackLengthInTank();
+  }
+
+  m_data->Stores.at("RecoEvent")->Set("TrueMuonEnergy", TrueMuonEnergy);  ///> Add digits to RecoEvent
+  m_data->Stores.at("RecoEvent")->Set("TrueTrackLengthInWater", WaterTrackLength);  ///> Add digits to RecoEvent
+  m_data->Stores.at("RecoEvent")->Set("TrueTrackLengthInMRD", MRDTrackLength);  ///> Add digits to RecoEvent
 
   //std::cout <<"MCRecoEventLoader: Muon start position: ("<<muonstartpos.X()<<","<<muonstartpos.Y()<<","<<muonstartpos.Z()<<")"<<std::endl;
   // set true vertex
@@ -179,32 +165,24 @@ void MCRecoEventLoader::FindTrueVertexFromMC() {
   muonstoppos.SetY(muonstoppos.Y()+yshift);
   muonstoppos.SetZ(muonstoppos.Z()+zshift);
   fMuonStopVertex->SetVertex(muonstoppos, muonstoptime); 
+
+  Log("MCRecoEventLoader Tool: Push true vertex to the RecoEvent store",v_message,verbosity);
+  m_data->Stores.at("RecoEvent")->Set("TrueVertex", fMuonStartVertex, true); 
+
+  Log("MCRecoEventLoader Tool: Push true stop vertex to the RecoEvent store",v_message,verbosity);
+  m_data->Stores.at("RecoEvent")->Set("TrueStopVertex", fMuonStopVertex, true); 
+
+ 
+//  logmessage = "  trueVtx = (" +to_string(muonstartpos.X()) + ", " + to_string(muonstartpos.Y()) + ", " + to_string(muonstartpos.Z()) +", "+to_string(muonstarttime)+ "\n"
+//            + "           " +to_string(muondirection.X()) + ", " + to_string(muondirection.Y()) + ", " + to_string(muondirection.Z()) + ") " + "\n";
   
-  logmessage = "  trueVtx = (" +to_string(muonstartpos.X()) + ", " + to_string(muonstartpos.Y()) + ", " + to_string(muonstartpos.Z()) +", "+to_string(muonstarttime)+ "\n"
-            + "           " +to_string(muondirection.X()) + ", " + to_string(muondirection.Y()) + ", " + to_string(muondirection.Z()) + ") " + "\n";
-  
-  Log(logmessage,v_debug,verbosity);
-	logmessage = "  muonStop = ("+to_string(muonstoppos.X()) + ", " + to_string(muonstoppos.Y()) + ", " + to_string(muonstoppos.Z()) + ") "+ "\n";
-	Log(logmessage,v_debug,verbosity);
+//  Log(logmessage,v_debug,verbosity);
+//	logmessage = "  muonStop = ("+to_string(muonstoppos.X()) + ", " + to_string(muonstoppos.Y()) + ", " + to_string(muonstoppos.Z()) + ") "+ "\n";
+//	Log(logmessage,v_debug,verbosity);
 
   //get information whether the extended particle trajectory were to hit the MRD
-  projectedmrdhit = primarymuon.GetProjectedHitMrd();
-
-}
-
-void MCRecoEventLoader::FindParticlePdgs(){
-
-  std::vector<int> primary_pdgs;
-  if(fMCParticles){
-    for(unsigned int particlei=0; particlei<fMCParticles->size(); particlei++){
-      MCParticle aparticle = fMCParticles->at(particlei);
-      if(aparticle.GetParentPdg()!=0) continue;      // not a primary particle
-      int pdg_code = aparticle.GetPdgCode();
-      primary_pdgs.push_back(pdg_code);
-    }
-  }
-
-  m_data->Stores.at("RecoEvent")->Set("PrimaryPdgs",primary_pdgs);
+  projectedmrdhit = primarylepton.GetProjectedHitMrd();
+  m_data->Stores.at("RecoEvent")->Set("ProjectedMRDHit", projectedmrdhit);  ///> Add digits to RecoEvent 
 
 }
 
@@ -228,6 +206,17 @@ void MCRecoEventLoader::FindPionKaonCountFromMC() {
   int nsecondary = 0;
   int nrings = 0;
   std::vector<unsigned int> index_particles_ring;
+  std::vector<int> primary_pdgs;
+  std::vector<double> tank_tracks;
+  std::vector<double> mrd_tracks;
+  std::vector<bool> contained_tracks;
+  std::vector<double> mrd_angle;
+  std::vector<double> energies;
+  std::vector<double> start_t;
+  std::vector<double> stop_t;
+  std::vector<double> dirx;
+  std::vector<double> diry;
+  std::vector<double> dirz;
 
   if(fMCParticles){
     Log("MCRecoEventLoader::  Tool: Num MCParticles = "+to_string(fMCParticles->size()),v_message,verbosity);
@@ -236,6 +225,39 @@ void MCRecoEventLoader::FindPionKaonCountFromMC() {
       //if(v_debug<verbosity) aparticle.Print();       // print if we're being *really* verbose
       if(aparticle.GetParentPdg()==0) {                //primary particle
         nprimary++;
+        //General track/particle info
+        primary_pdgs.push_back( aparticle.GetPdgCode() );
+	tank_tracks.push_back( aparticle.GetTrackLengthInTank() );
+        mrd_tracks.push_back( aparticle.GetTrackLengthInMrd()*100. );
+        energies.push_back( aparticle.GetStartEnergy() );
+        start_t.push_back( aparticle.GetStartTime() );
+        stop_t.push_back( aparticle.GetStopTime() );
+        dirx.push_back( aparticle.GetStartDirection().X() );
+        diry.push_back( aparticle.GetStartDirection().Y() );
+        dirz.push_back( aparticle.GetStartDirection().Z() );
+        if(!aparticle.GetExitsTank()){
+          contained_tracks.push_back(true);
+          mrd_angle.push_back(-9999);
+        } else if(aparticle.GetEntersMrd()){
+            Position end_point = aparticle.GetStopVertex();
+            Position start_point = aparticle.GetMrdEntryPoint();
+            Position mrd_point = aparticle.GetMrdExitPoint();
+            double x_length = end_point.X() - start_point.X();
+            double y_length = end_point.Y() - start_point.Y();
+            double z_length = end_point.Z() - start_point.Z();
+            double hyp = sqrt(x_length*x_length + y_length*y_length + z_length*z_length);
+            mrd_angle.push_back(acos(z_length / hyp));
+            if(!aparticle.GetExitsMrd()){
+              contained_tracks.push_back(true);
+            } else {
+              contained_tracks.push_back(false);
+            }
+        } else {
+          contained_tracks.push_back(false);
+          mrd_angle.push_back(-9999);
+        }
+
+        //PDG counting
         if (TMath::Abs(aparticle.GetPdgCode())==11){
           if (aparticle.GetStartEnergy() > GetCherenkovThresholdE(11)) {nrings++; index_particles_ring.push_back(particlei);}
         } 
@@ -289,6 +311,7 @@ void MCRecoEventLoader::FindPionKaonCountFromMC() {
   if (fGetNRings){
     Log("MCRecoEventLoader: Found "+std::to_string(nrings)+" rings in this event, from "+std::to_string(nprimary)+" primary particles and "+std::to_string(nsecondary)+" secondary particles.",2,verbosity);
   }
+//  std::cout << std::endl;
   //Fill in pion counts for this event
   m_data->Stores.at("RecoEvent")->Set("MCPi0Count", pi0count);
   m_data->Stores.at("RecoEvent")->Set("MCPiPlusCount", pipcount);
@@ -296,43 +319,23 @@ void MCRecoEventLoader::FindPionKaonCountFromMC() {
   m_data->Stores.at("RecoEvent")->Set("MCK0Count", K0count);
   m_data->Stores.at("RecoEvent")->Set("MCKPlusCount", Kpcount);
   m_data->Stores.at("RecoEvent")->Set("MCKMinusCount", Kmcount);
+  m_data->Stores.at("RecoEvent")->Set("PrimaryPdgs",primary_pdgs);
+  m_data->Stores.at("RecoEvent")->Set("FSPTankTrackLengths",tank_tracks);
+  m_data->Stores.at("RecoEvent")->Set("FSPMrdTrackLengths",mrd_tracks);
+  m_data->Stores.at("RecoEvent")->Set("FSPContained",contained_tracks);
+  m_data->Stores.at("RecoEvent")->Set("FSPMrdAngles",mrd_angle);
+  m_data->Stores.at("RecoEvent")->Set("FSPEnergies",energies);
+  m_data->Stores.at("RecoEvent")->Set("FSPStartT",start_t);
+  m_data->Stores.at("RecoEvent")->Set("FSPStopT",stop_t);
+  m_data->Stores.at("RecoEvent")->Set("FSPDirX",dirx);
+  m_data->Stores.at("RecoEvent")->Set("FSPDirY",diry);
+  m_data->Stores.at("RecoEvent")->Set("FSPDirZ",dirz);
+
   if (fGetNRings) {
     m_data->Stores.at("RecoEvent")->Set("NRings",nrings);
     m_data->Stores.at("RecoEvent")->Set("IndexParticlesRing",index_particles_ring);
   }
 
-}
-
-
-void MCRecoEventLoader::PushTrueVertex(bool savetodisk) {
-  Log("MCRecoEventLoader Tool: Push true vertex to the RecoEvent store",v_message,verbosity);
-  m_data->Stores.at("RecoEvent")->Set("TrueVertex", fMuonStartVertex, savetodisk); 
-}
-
-
-void MCRecoEventLoader::PushTrueStopVertex(bool savetodisk) {
-  Log("MCRecoEventLoader Tool: Push true stop vertex to the RecoEvent store",v_message,verbosity);
-  m_data->Stores.at("RecoEvent")->Set("TrueStopVertex", fMuonStopVertex, savetodisk); 
-}
-
-void MCRecoEventLoader::PushTrueMuonEnergy(double MuE) {
-	Log("MCRecoEventLoader Tool: Push true muon energy to the RecoEvent store",v_message,verbosity);
-	m_data->Stores.at("RecoEvent")->Set("TrueMuonEnergy", MuE);  ///> Add digits to RecoEvent
-}
-
-void MCRecoEventLoader::PushTrueWaterTrackLength(double WaterT) {
-	Log("MCRecoEventLoader Tool: Push true track length in tank to the RecoEvent store",v_message,verbosity);
-	m_data->Stores.at("RecoEvent")->Set("TrueTrackLengthInWater", WaterT);  ///> Add digits to RecoEvent
-}
-
-void MCRecoEventLoader::PushTrueMRDTrackLength(double MRDT) {
-	Log("MCRecoEventLoader Tool: Push true track length in MRD to the RecoEvent store",v_message,verbosity);
-	m_data->Stores.at("RecoEvent")->Set("TrueTrackLengthInMRD", MRDT);  ///> Add digits to RecoEvent
-}
-
-void MCRecoEventLoader::PushProjectedMrdHit(bool projectedmrdhit){
-  Log("MCRecoEventLoader Tool: Push projected Mrd Hit",v_message,verbosity);
-  m_data->Stores.at("RecoEvent")->Set("ProjectedMRDHit", projectedmrdhit);  ///> Add digits to RecoEvent 
 }
 
 double MCRecoEventLoader::GetCherenkovThresholdE(int pdg_code) {
@@ -369,5 +372,43 @@ void MCRecoEventLoader::PushIBDInfo(){
   
 }
 
+void MCRecoEventLoader::FindFollowersFromMC(){
+  vector<double> followerE;
+  vector<double> followerX;
+  vector<double> followerY;
+  vector<double> followerZ;
+  vector<double> followerStartT;
+  vector<double> followerStopT;
+  vector<int> followerPDG;
+  vector<int> followerParentPDG;
 
+  if(fMCParticles){
+    Log("MCRecoEventLoader::  Tool: Num MCParticles = "+to_string(fMCParticles->size()),v_message,verbosity);
+    for(unsigned int particlei=0; particlei<fMCParticles->size(); particlei++){
+      MCParticle aparticle = fMCParticles->at(particlei);
+      //if(v_debug<verbosity) aparticle.Print();       // print if we're being *really* verbose
+      if(aparticle.GetParentPdg()==0) continue;     //not primary particle
+      if(TMath::Abs(aparticle.GetPdgCode()) == 11 || TMath::Abs(aparticle.GetPdgCode()) == 13 || (aparticle.GetPdgCode() == 22 && aparticle.GetParentPdg() == 111)){
+        followerE.push_back(aparticle.GetStartEnergy());
+        followerPDG.push_back(aparticle.GetPdgCode());
+        followerParentPDG.push_back(aparticle.GetParentPdg());
+        followerStartT.push_back(aparticle.GetStartTime());
+        followerStopT.push_back(aparticle.GetStopTime());
+        followerX.push_back(aparticle.GetStartDirection().X());
+        followerY.push_back(aparticle.GetStartDirection().Y());
+        followerZ.push_back(aparticle.GetStartDirection().Z());
+      }
+    }
+  } 
+
+  m_data->Stores.at("RecoEvent")->Set("FollowerE",followerE);
+  m_data->Stores.at("RecoEvent")->Set("FollowerPDG",followerPDG);
+  m_data->Stores.at("RecoEvent")->Set("FollowerParentPDG",followerParentPDG);
+  m_data->Stores.at("RecoEvent")->Set("FollowerStartT",followerStartT);
+  m_data->Stores.at("RecoEvent")->Set("FollowerStopT",followerStopT);
+  m_data->Stores.at("RecoEvent")->Set("FollowerDirX",followerX);
+  m_data->Stores.at("RecoEvent")->Set("FollowerDirY",followerY);
+  m_data->Stores.at("RecoEvent")->Set("FollowerDirZ",followerZ);
+
+}
 
