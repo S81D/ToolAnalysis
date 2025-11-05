@@ -17,11 +17,13 @@ bool PhaseIITreeMaker::Initialise(std::string configfile, DataModel &data){
   hasBNBtimingMC = false;
   MCWaveform = false;
   VertexLeastSq = false;
+  ApplyDeadMask = false;
 
   m_variables.Get("verbose", verbosity);
   m_variables.Get("IsData",isData);
   m_variables.Get("PMTWaveformSim",MCWaveform);
   m_variables.Get("IntGen",intGen);
+  m_variables.Get("ApplyDeadMask",ApplyDeadMask);
   m_variables.Get("HasBNBtimingMC",hasBNBtimingMC);
   m_variables.Get("VertexLeastSquares",VertexLeastSq);
   m_variables.Get("TankHitInfo_fill", TankHitInfo_fill);
@@ -609,16 +611,6 @@ bool PhaseIITreeMaker::Execute(){
   // Reset variables
   this->ResetVariables();
   // Get a pointer to the ANNIEEvent Store
-
-  // An upstream tool may opt to skip this execution stage
-  // For example the PMTWaveformSim tool will skip events with no MCHits or if
-  // no waveforms are produced.
-  bool skip = false;
-  bool got_skip_status = m_data->Stores["ANNIEEvent"]->Get("SkipExecute", skip);
-  if (got_skip_status && skip) {
-    Log("PhaseIITreeMaker: An upstream tool told me to skip this event.",v_warning,verbosity);
-    return true;
-  } 
 
   //  If only clean events are built, return true for dirty events
   if(fillCleanEventsOnly){
@@ -1613,9 +1605,12 @@ void PhaseIITreeMaker::LoadTankClusterHits(std::vector<Hit> cluster_hits){
   fClusterHits = 0;
   for (int i = 0; i<(int)cluster_hits.size(); i++){
     int channel_key = cluster_hits.at(i).GetTubeId();
+	Detector* this_detector = geom->ChannelToDetector(channel_key);
+	if (ApplyDeadMask && this_detector->GetStatus() == detectorstatus::OFF) {
+      continue;
+    }
     std::map<int, double>::iterator it = ChannelKeyToSPEMap.find(channel_key);
     if(it != ChannelKeyToSPEMap.end()){ //Charge to SPE conversion is available
-      Detector* this_detector = geom->ChannelToDetector(channel_key);
       unsigned long detkey = this_detector->GetDetectorID();
       Position det_position = this_detector->GetDetectorPosition();
       double hit_charge = cluster_hits.at(i).GetCharge();
@@ -1659,9 +1654,12 @@ void PhaseIITreeMaker::LoadTankClusterHitsMC(std::vector<MCHit> cluster_hits, st
      int wcsimid = channelkey_to_pmtid.at(utubeid);
      unsigned long detkey_data = pmtid_to_channelkey[wcsimid];
      int channel_key_data = (int) detkey_data;
+	 Detector* this_detector = geom->ChannelToDetector(channel_key);
+	 if (ApplyDeadMask && this_detector->GetStatus() == detectorstatus::OFF) {
+	    continue;
+	 }
      std::map<int, double>::iterator it = ChannelKeyToSPEMap.find(channel_key_data);
      if(it != ChannelKeyToSPEMap.end()){ //Charge to SPE conversion is available
-       Detector* this_detector = geom->ChannelToDetector(tubeid);
        Position det_position = this_detector->GetDetectorPosition();
        unsigned long detkey = this_detector->GetDetectorID();
        double hit_PE = cluster_hits.at(i).GetCharge();
@@ -1947,6 +1945,12 @@ void PhaseIITreeMaker::LoadAllTankHits(bool isData, bool MCWaveform) {
             channel_key_data = pmtid_to_channelkey[wcsimid];
         }
 
+		bool SPE_available = false;
+		
+		if (ApplyDeadMask && this_detector->GetStatus() == detectorstatus::OFF) {
+            goto skip_channel;  // do not save the hits information for a Dead PMT (if the mask is on), jump to skip_channel
+        }
+
         bool SPE_available = (isData || MCWaveform) ? 
                              (ChannelKeyToSPEMap.find(channel_key) != ChannelKeyToSPEMap.end()) : 
                              (ChannelKeyToSPEMap.find(channel_key_data) != ChannelKeyToSPEMap.end());
@@ -1989,6 +1993,7 @@ void PhaseIITreeMaker::LoadAllTankHits(bool isData, bool MCWaveform) {
             }
         }
 
+		skip_channel:   // skip the block above if the PMT is dead, advance the iterator
         if (isData || MCWaveform) {
             it_tank_data++;
             if (it_tank_data == Hits->end()) loop_tank = false;
