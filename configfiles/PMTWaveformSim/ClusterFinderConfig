@@ -2,6 +2,7 @@
 
 verbosity 0
 HitStore Hits #Either MCHits or Hits (accessed in ANNIEEvent store)
+ApplyDeadMask 1
 OutputFile BeamRun_ClusterFinder_DefaultOutput #Output root prefix name for the current run
 ClusterFindingWindow 40 # in ns, size of the window used to "clusterize"
 AcqTimeWindow 70000 # in ns, size of the acquisition window
