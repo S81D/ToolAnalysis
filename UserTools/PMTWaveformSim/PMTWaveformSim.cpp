@@ -86,9 +86,8 @@ bool PMTWaveformSim::Initialise(std::string configfile, DataModel &data)
     return false;
   }
 
-  // Could set a seed here for repeatability
-  // Though would probably want to seed it in the Execute function based on the run/part/event numbers
-  fRandom = new TRandom3();
+  // random seed is grabbed from the system clock
+  fRandom.SetSeed(0);
   
   return true;
 }
@@ -98,11 +97,51 @@ bool PMTWaveformSim::Execute()
 {
   int load_status = LoadFromStores();
 
-  
+  if (load_status == 0) return false;
+
   // The container for the data that we'll put into the ANNIEEvent
   std::map<unsigned long, std::vector<Waveform<uint16_t>> > RawADCDataMC;
   std::map<unsigned long, std::vector<CalibratedADCWaveform<double>> > CalADCDataMC;
 
+
+  // If MCHits is empty (load_status == 2), create one minimal baseline waveform so that the hit finder doesn't freak out
+  // while keeping the rest of the machinery the same
+  if (load_status == 2) {
+    logmessage = "PMTWaveformSim: Creating single minimal baseline waveform (No MCHits)...";
+    Log(logmessage, v_message, verbosity);
+    
+    // we can use any valid PMT ID --> let's just use 332
+    unsigned long dummy_chankey = 332;
+    
+    // create a short baseline waveform (~50ns) so that the hit finder will be satisfied
+    int num_samples = 25;   // 50ns
+    double noiseSigma = fRandom.Gaus(1, 0.01);   // set the noise to basically 0
+    int baseline = fRandom.Uniform(300, 350);
+    
+    std::vector<uint16_t> rawSamples;
+    std::vector<double> calSamples;
+    
+    for (int i = 0; i < num_samples; i++) {
+      double noise = fRandom.Gaus(0, noiseSigma);
+      int sample = std::round(noise + baseline);
+      sample = (sample > 4095) ? 4095 : ((sample < 0) ? 0 : sample);  // shouldn't matter
+      
+      rawSamples.push_back(sample);
+      calSamples.push_back((sample - baseline) * ADC_TO_VOLT);
+    }
+    
+    std::vector<Waveform<uint16_t>> rawWaveforms;
+    std::vector<CalibratedADCWaveform<double>> calWaveforms;
+    
+    rawWaveforms.emplace_back(0, rawSamples);
+    calWaveforms.emplace_back(0, calSamples, baseline, noiseSigma);
+    
+    RawADCDataMC.emplace(dummy_chankey, rawWaveforms);
+    CalADCDataMC.emplace(dummy_chankey, calWaveforms);
+
+  }
+
+  // normal use case (no blank MCHits)
   for (auto mcHitsIt : *fMCHits) { // Loop over the hit PMTs
     int PMTID = mcHitsIt.first;
 
@@ -166,8 +205,8 @@ bool PMTWaveformSim::Execute()
     // Set the noise envelope and baseline for this PMT
     // The noise std dev appears to be normally distributed around 1 with sigma 0.25
     // TODO: set accurate baseline and noise profiles for all PMTs individually (noise should be fine, baselines will vary)
-    double noiseSigma = fRandom->Gaus(1, 0.25);
-    int basline = fRandom->Uniform(300, 350);
+    double noiseSigma = fRandom.Gaus(1, 0.25);
+    int basline = fRandom.Uniform(300, 350);
     
     // convert the sample map into a vector of Waveforms and put them into the container
     std::vector<Waveform<uint16_t>> rawWaveforms;
@@ -178,22 +217,14 @@ bool PMTWaveformSim::Execute()
     CalADCDataMC.emplace(PMTID, calWaveforms);
   }// end loop over PMTs
 
+
   // Publish the waveforms to the ANNIEEvent store if we have them
-   if (RawADCDataMC.size()) {     
-    m_data->Stores.at("ANNIEEvent")->Set("RawADCDataMC",      RawADCDataMC);
-    m_data->Stores.at("ANNIEEvent")->Set("CalibratedADCData", CalADCDataMC);
-   } else {
-     logmessage = "PMTWaveformSim: No waveforms produced. Skipping!";
-     Log(logmessage, v_warning, verbosity);
-     m_data->Stores.at("ANNIEEvent")->Set("SkipExecute", true);
-     return true;
-   }
-     
+  m_data->Stores.at("ANNIEEvent")->Set("RawADCDataMC",      RawADCDataMC);
+  m_data->Stores.at("ANNIEEvent")->Set("CalibratedADCData", CalADCDataMC); 
   
   if (fDebug) 
     FillDebugGraphs(RawADCDataMC);
 
-  m_data->Stores.at("ANNIEEvent")->Set("SkipExecute", false);
   return true;
 }
 
@@ -309,9 +340,9 @@ bool PMTWaveformSim::SampleFitParameters(int pmtid)
   }
   
   // First sample a Gaussian with mean 0 and deviation 1
-  double rr0 = fRandom->Gaus();  // p0
-  double rr1 = fRandom->Gaus();  // p1
-  double rr2 = fRandom->Gaus();  // p2
+  double rr0 = fRandom.Gaus();  // p0
+  double rr1 = fRandom.Gaus();  // p1
+  double rr2 = fRandom.Gaus();  // p2
 
   // Randomly sample parameters with their associated uncertainties
   fP0 = rr0*pmtParams.up0 + pmtParams.p0;
@@ -321,10 +352,10 @@ bool PMTWaveformSim::SampleFitParameters(int pmtid)
   // for the reflection coefficients, we know they must be positive (or else its nonsense)
   double rr3, rr4, rr5, rr6;
   do {
-    rr3 = fRandom->Gaus();  // T1
-    rr4 = fRandom->Gaus();  // T2
-    rr5 = fRandom->Gaus();  // r1
-    rr6 = fRandom->Gaus();  // r2
+    rr3 = fRandom.Gaus();  // T1
+    rr4 = fRandom.Gaus();  // T2
+    rr5 = fRandom.Gaus();  // r1
+    rr6 = fRandom.Gaus();  // r2
 
     fT1 = rr3*pmtParams.uT1 + pmtParams.T1;
     fT2 = rr4*pmtParams.uT2 + pmtParams.T2;
@@ -429,7 +460,7 @@ void PMTWaveformSim::ConvertMapToWaveforms(const std::map<uint16_t, uint16_t> &s
     uint16_t tick = sample_pair.first;
     
     // Generate noise for each sample based on the std dev of the noise envelope
-    double noise = fRandom->Gaus(0, noiseSigma);
+    double noise = fRandom.Gaus(0, noiseSigma);
     int sample = std::round(noise + baseline);
 
     sample += sample_pair.second;
@@ -461,7 +492,7 @@ int PMTWaveformSim::LoadFromStores()
   }
 
   if (fMCHits->empty()) {
-    logmessage = "PMTWaveformSim: The MCHits map is empty! Skipping!";
+    logmessage = "PMTWaveformSim: The MCHits map is empty! Will fill a single PMT with a minimal waveform.";
     Log(logmessage, v_warning, verbosity);
     return 2;
   }
@@ -527,7 +558,7 @@ double PMTWaveformSim::TimeSmearing(int pmtid)
   }
 
   // apply time smearing by sampling normal centered at 0 with std = timing_sigma
-  double time_smearing = fRandom->Gaus(0, timing_sigma);
+  double time_smearing = fRandom.Gaus(0, timing_sigma);
   return time_smearing;
 }
 				     
