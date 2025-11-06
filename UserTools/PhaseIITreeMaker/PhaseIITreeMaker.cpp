@@ -1654,7 +1654,7 @@ void PhaseIITreeMaker::LoadTankClusterHitsMC(std::vector<MCHit> cluster_hits, st
      int wcsimid = channelkey_to_pmtid.at(utubeid);
      unsigned long detkey_data = pmtid_to_channelkey[wcsimid];
      int channel_key_data = (int) detkey_data;
-	 Detector* this_detector = geom->ChannelToDetector(channel_key);
+	 Detector* this_detector = geom->ChannelToDetector(tubeid);
 	 if (ApplyDeadMask && this_detector->GetStatus() == detectorstatus::OFF) {
 	    continue;
 	 }
@@ -1951,7 +1951,7 @@ void PhaseIITreeMaker::LoadAllTankHits(bool isData, bool MCWaveform) {
             goto skip_channel;  // do not save the hits information for a Dead PMT (if the mask is on), jump to skip_channel
         }
 
-        bool SPE_available = (isData || MCWaveform) ? 
+        SPE_available = (isData || MCWaveform) ? 
                              (ChannelKeyToSPEMap.find(channel_key) != ChannelKeyToSPEMap.end()) : 
                              (ChannelKeyToSPEMap.find(channel_key_data) != ChannelKeyToSPEMap.end());
 
