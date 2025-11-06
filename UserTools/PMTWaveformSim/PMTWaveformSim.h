@@ -69,14 +69,13 @@ class PMTWaveformSim: public Tool {
 
   std::string fPMTParameterFile;
   
-  TRandom3 *fRandom;
+  TRandom3 fRandom;
 
   std::map<int, PMTFitParams> fPMTParamMap;
   double fP0, fP1, fP2;                        // main peak parameters
   double fT1, fT2, fR1, fR2;                   // reflection amplitudes and time spacings
 
                                                // timing uncertainty map
-  //std::map<unsigned long, double> ChannelKeyToTimingSigmaMap;
   std::map<unsigned long, double>* ChannelKeyToTimingSigmaMap;
   
   bool fDebug;
