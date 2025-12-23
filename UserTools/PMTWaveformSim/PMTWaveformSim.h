@@ -76,7 +76,7 @@ class PMTWaveformSim: public Tool {
   double fT1, fT2, fR1, fR2;                   // reflection amplitudes and time spacings
 
                                                // timing uncertainty map
-  std::map<unsigned long, double>* ChannelKeyToTimingSigmaMap;
+  std::map<unsigned long, double> ChannelKeyToTimingSigmaMap;
   
   bool fDebug;
   TFile *fOutFile;
