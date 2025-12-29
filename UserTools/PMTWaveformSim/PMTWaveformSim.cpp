@@ -87,7 +87,7 @@ bool PMTWaveformSim::Initialise(std::string configfile, DataModel &data)
   }
 
   // random seed is grabbed from the system clock
-  fRandom.SetSeed(0);
+  fRandom = new TRandom3();
   
   return true;
 }
@@ -115,14 +115,14 @@ bool PMTWaveformSim::Execute()
     
     // create a short baseline waveform (~50ns) so that the hit finder will be satisfied
     int num_samples = 25;   // 50ns
-    double noiseSigma = fRandom.Gaus(1, 0.01);   // set the noise to basically 0
-    int baseline = fRandom.Uniform(300, 350);
+    double noiseSigma = fRandom->Gaus(1, 0.01);   // set the noise to basically 0
+    int baseline = fRandom->Uniform(300, 350);
     
     std::vector<uint16_t> rawSamples;
     std::vector<double> calSamples;
     
     for (int i = 0; i < num_samples; i++) {
-      double noise = fRandom.Gaus(0, noiseSigma);
+      double noise = fRandom->Gaus(0, noiseSigma);
       int sample = std::round(noise + baseline);
       sample = (sample > 4095) ? 4095 : ((sample < 0) ? 0 : sample);  // shouldn't matter
       
@@ -162,7 +162,7 @@ bool PMTWaveformSim::Execute()
       double hit_t0 = mcHit.GetTime() + fTimeShift;
       double hit_charge = mcHit.GetCharge();
 
-      logmessage = "PMTWaveformSim:\n    hit charge =  " + std::to_string(hit_charge) + " p.e., hit time =  " + std::to_string(hit_t0) + " for PMTID " + std::to_string(PMTID);
+      logmessage = "PMTWaveformSim: hit charge =  " + std::to_string(hit_charge) + " p.e., hit time =  " + std::to_string(hit_t0) + " for PMTID " + std::to_string(PMTID);
       Log(logmessage, v_message, verbosity);
 
       // before "digitizing", add smearing based on the uncertainty extracted in the laser analysis
@@ -187,7 +187,7 @@ bool PMTWaveformSim::Execute()
  
         std::stringstream logmessage;
         logmessage << "    --> clocktick = " << clocktick << ", sample = " << sample;
-        Log(logmessage.str(), v_message, verbosity);
+        Log(logmessage.str(), v_debug, verbosity);
 	
         // check if this hit time has been recorded
         // either set it or add to it
@@ -205,8 +205,8 @@ bool PMTWaveformSim::Execute()
     // Set the noise envelope and baseline for this PMT
     // The noise std dev appears to be normally distributed around 1 with sigma 0.25
     // TODO: set accurate baseline and noise profiles for all PMTs individually (noise should be fine, baselines will vary)
-    double noiseSigma = fRandom.Gaus(1, 0.25);
-    int basline = fRandom.Uniform(300, 350);
+    double noiseSigma = fRandom->Gaus(1, 0.25);
+    int basline = fRandom->Uniform(300, 350);
     
     // convert the sample map into a vector of Waveforms and put them into the container
     std::vector<Waveform<uint16_t>> rawWaveforms;
@@ -340,9 +340,9 @@ bool PMTWaveformSim::SampleFitParameters(int pmtid)
   }
   
   // First sample a Gaussian with mean 0 and deviation 1
-  double rr0 = fRandom.Gaus();  // p0
-  double rr1 = fRandom.Gaus();  // p1
-  double rr2 = fRandom.Gaus();  // p2
+  double rr0 = fRandom->Gaus();  // p0
+  double rr1 = fRandom->Gaus();  // p1
+  double rr2 = fRandom->Gaus();  // p2
 
   // Randomly sample parameters with their associated uncertainties
   fP0 = rr0*pmtParams.up0 + pmtParams.p0;
@@ -352,10 +352,10 @@ bool PMTWaveformSim::SampleFitParameters(int pmtid)
   // for the reflection coefficients, we know they must be positive (or else its nonsense)
   double rr3, rr4, rr5, rr6;
   do {
-    rr3 = fRandom.Gaus();  // T1
-    rr4 = fRandom.Gaus();  // T2
-    rr5 = fRandom.Gaus();  // r1
-    rr6 = fRandom.Gaus();  // r2
+    rr3 = fRandom->Gaus();  // T1
+    rr4 = fRandom->Gaus();  // T2
+    rr5 = fRandom->Gaus();  // r1
+    rr6 = fRandom->Gaus();  // r2
 
     fT1 = rr3*pmtParams.uT1 + pmtParams.T1;
     fT2 = rr4*pmtParams.uT2 + pmtParams.T2;
@@ -384,7 +384,7 @@ bool PMTWaveformSim::SampleFitParameters(int pmtid)
             << "\n  random T2 = " << fT2
             << "\n  random R1 = " << fR1
             << "\n  random R2 = " << fR2;
-  Log(debug_msg.str(), v_warning, verbosity);
+  Log(debug_msg.str(), v_debug, verbosity);
 
   return true;
 }
@@ -417,7 +417,7 @@ uint16_t PMTWaveformSim::CustomLogNormalPulse(double hit_t0, uint16_t clocktick,
             << ", fR1 = " << fR1
             << ", fR2 = " << fR2
             << ", hit_charge = " << hit_charge;
-  Log(debug_msg.str(), v_warning, verbosity);
+  Log(debug_msg.str(), v_debug, verbosity);
 
   // main peak parameters 
   double numerator = log(x/fP1);
@@ -460,7 +460,7 @@ void PMTWaveformSim::ConvertMapToWaveforms(const std::map<uint16_t, uint16_t> &s
     uint16_t tick = sample_pair.first;
     
     // Generate noise for each sample based on the std dev of the noise envelope
-    double noise = fRandom.Gaus(0, noiseSigma);
+    double noise = fRandom->Gaus(0, noiseSigma);
     int sample = std::round(noise + baseline);
 
     sample += sample_pair.second;
@@ -539,27 +539,28 @@ void PMTWaveformSim::FillDebugGraphs(const std::map<unsigned long, std::vector<W
 
 double PMTWaveformSim::TimeSmearing(int pmtid)
 {
+
+  double timing_sigma = 1.0;
+
   // fetch uncertainty using PMT id
   auto it = ChannelKeyToTimingSigmaMap->find(pmtid);
-  double timing_sigma;
+
   if (it != ChannelKeyToTimingSigmaMap->end()) {
-    timing_sigma = it->second;
-    if (verbosity > v_debug) {
-        std::cout << "PMTWaveformSim: Found timing uncertainty for PMT " << pmtid
-                  << " -> " << timing_sigma << " ns" << std::endl;
-    }
-  } else {
-      timing_sigma = 1.0;  // default to 1 ns if not found
-      if (verbosity > v_error) {
-          std::cout << "PMTWaveformSim: Didn't find timing uncertainty for PMT " << pmtid
-                    << ", setting timing uncertainty to " << timing_sigma << " ns"
-                    << std::endl;
-      }
-  }
+        timing_sigma = it->second;
+        if (verbosity > v_warning) {
+            std::cout << "PMTWaveformSim: Found timing uncertainty for PMT "                                            
+                      << pmtid << " = "
+                      << timing_sigma << " ns\n";
+        }
+    } else {
+        std::cout << "PMTWaveformSim: Didn't find timing uncertainty for PMT " << pmtid
+                  << "!!! (timing uncertainty defaulting to " << timing_sigma << " ns)\n";
+    }                                                                                             
 
   // apply time smearing by sampling normal centered at 0 with std = timing_sigma
-  double time_smearing = fRandom.Gaus(0, timing_sigma);
-  return time_smearing;
+  double time_smearing = fRandom->Gaus(0, timing_sigma);                                           
+  return time_smearing;         
+
 }
 				     
 
