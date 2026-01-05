@@ -167,8 +167,26 @@ bool PMTWaveformSim::Execute()
 
       // before "digitizing", add smearing based on the uncertainty extracted in the laser analysis
       if (fuseTimeSmearing) {
-        double timesmear = TimeSmearing(PMTID);
-        hit_t0 += timesmear;
+
+        // grab the timing jitter map
+        TimeSmearing(PMTID);
+
+        // apply time smearing by sampling normal centered at 0 with std = timing_sigma
+        if (verbosity > v_warning) {
+            std::cout << "PMTWaveformSim: Found timing uncertainty for PMT "                                            
+                      << PMTID << " = "
+                      << fTimeSmear << " ns\n";
+        } 
+        
+        double timejitter = fRandom->Gaus(0, fTimeSmear);               
+        if (verbosity > v_message) {
+          std::cout << "PMTWaveformSim: Sampled timing uncertainty for PMT "                                            
+                    << PMTID << " = "
+                    << timejitter << " ns\n";
+        }
+
+        hit_t0 += timejitter;
+
       }
 
       // now convert to clock ticks
@@ -249,24 +267,16 @@ bool PMTWaveformSim::LoadPMTParameters()
     return false;
   }
 
-  if (fuseTimeSmearing) {
-    // load timing offsets from the laser calibration to use as our timing uncertainty / smearing
-    bool got_offset = m_data->CStore.Get("ChannelNumToTankPMTTimingSigmaMap",ChannelKeyToTimingSigmaMap); 
-    if (!got_offset) {
-      logmessage = "PMTWaveformSim: Error retrieving PMT timing uncertainty... double check LoadGeometry maybe?";
-      Log(logmessage, v_error, verbosity);
-      return false;
-    }
-  }
-
   int pmtid;
   // Stored fit parameters.
   // p0, p1, and p2 are the mean values of the lognorm
   // T1 and T2 are the reflection spacings
   // r1 and r2 are the reflection amplitudes (relative to the main peak amplitude)
   // the uncertainties (u*) are the sq(diagonal elements) of the fitted covariance matrix
+  // offset_std [ns] is the timing jitter as observed in the laser calibration
   double p0, p1, p2, T1, T2, R1, R2,
-         up0, up1, up2, uT1, uT2, uR1, uR2;
+         up0, up1, up2, uT1, uT2, uR1, uR2,
+         time_jitter;
                     
   std::string comma;
   std::string line;
@@ -288,9 +298,11 @@ bool PMTWaveformSim::LoadPMTParameters()
     // Turn the line into a stringstream to extract the values
     std::stringstream ss(line);
     ss >> pmtid >> comma >> p0 >> comma >> p1 >> comma >> p2 >> comma >> T1 >> comma >> T2 >> comma >> R1 >> comma >> R2 >> comma 
-       >> up0 >> comma >> up1 >> comma >> up2 >> comma >> uT1 >> comma >> uT2 >> comma >> uR1 >> comma >> uR2;
+       >> up0 >> comma >> up1 >> comma >> up2 >> comma >> uT1 >> comma >> uT2 >> comma >> uR1 >> comma >> uR2 >> comma
+       >> time_jitter;
 
     fPMTParamMap[pmtid] = {p0, p1, p2, T1, T2, R1, R2, up0, up1, up2, uT1, uT2, uR1, uR2};
+    fPMTJitterMap[pmtid] = time_jitter;
 
     logmessage = "PMTWaveformSim: Loaded parameters for PMTID " + std::to_string(pmtid) + ": ";
     logmessage += "p0 = " + std::to_string(p0);
@@ -300,13 +312,14 @@ bool PMTWaveformSim::LoadPMTParameters()
     logmessage += " T2 = " + std::to_string(T2);
     logmessage += " R1 = " + std::to_string(R1);
     logmessage += " R2 = " + std::to_string(R2);
-    logmessage += " uncertainty_p0 = " + std::to_string(p0);
-    logmessage += " uncertainty_p1 = " + std::to_string(p1);
-    logmessage += " uncertainty_p2 = " + std::to_string(p2);
-    logmessage += " uncertainty_T1 = " + std::to_string(T1);
-    logmessage += " uncertainty_T2 = " + std::to_string(T2);
-    logmessage += " uncertainty_R1 = " + std::to_string(R1);
-    logmessage += " uncertainty_R2 = " + std::to_string(R2);
+    logmessage += " uncertainty_p0 = " + std::to_string(up0);
+    logmessage += " uncertainty_p1 = " + std::to_string(up1);
+    logmessage += " uncertainty_p2 = " + std::to_string(up2);
+    logmessage += " uncertainty_T1 = " + std::to_string(uT1);
+    logmessage += " uncertainty_T2 = " + std::to_string(uT2);
+    logmessage += " uncertainty_R1 = " + std::to_string(uR1);
+    logmessage += " uncertainty_R2 = " + std::to_string(uR2);
+    logmessage += " offset_std = " + std::to_string(time_jitter);
     Log(logmessage, v_message, verbosity);
   }
 
@@ -537,33 +550,21 @@ void PMTWaveformSim::FillDebugGraphs(const std::map<unsigned long, std::vector<W
   }// end loop over PMTs
 }
 
-double PMTWaveformSim::TimeSmearing(int pmtid)
+bool PMTWaveformSim::TimeSmearing(int pmtid)
 {
+  if (fPMTJitterMap.find(pmtid) != fPMTJitterMap.end()) {
+    fTimeSmear = fPMTJitterMap[pmtid];
+  } else {
+    logmessage = "PMTWaveformSim: PMT timing jitter not found for " + std::to_string(pmtid);
+    logmessage += ", exiting...";
+    Log(logmessage, v_error, verbosity);
+    return false;
+  }
 
-  double timing_sigma = 1.0;
-
-  // fetch uncertainty using PMT id
-  auto it = ChannelKeyToTimingSigmaMap->find(pmtid);
-
-  if (it != ChannelKeyToTimingSigmaMap->end()) {
-        timing_sigma = it->second;
-        if (verbosity > v_warning) {
-            std::cout << "PMTWaveformSim: Found timing uncertainty for PMT "                                            
-                      << pmtid << " = "
-                      << timing_sigma << " ns\n";
-        }
-    } else {
-        std::cout << "PMTWaveformSim: Didn't find timing uncertainty for PMT " << pmtid
-                  << "!!! (timing uncertainty defaulting to " << timing_sigma << " ns)\n";
-    }                                                                                             
-
-  // apply time smearing by sampling normal centered at 0 with std = timing_sigma
-  double time_smearing = fRandom->Gaus(0, timing_sigma);                                           
-  return time_smearing;         
+  return true;
 
 }
 				     
-
 
 
 
