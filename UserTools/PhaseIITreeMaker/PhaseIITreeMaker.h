@@ -306,15 +306,10 @@ class PhaseIITreeMaker: public Tool {
   std::map<std::string, std::vector<double>> fxsec_weights;
   std::map<std::string, std::vector<double>> fflux_weights;
   std::vector<double> fAll0;
-  std::vector<double> fAll1;
-  std::vector<double> fAll2;
-  std::vector<double> fAll3;
-  std::vector<double> fAll4;
-  std::vector<double> fAll5;
   std::vector<double> fAxFFCCQEshape;
   std::vector<double> fDecayAngMEC;
   std::vector<double> fNormCCCOH;
-  std::vector<double> fNorm_NCCOH;
+  std::vector<double> fNormNCCOH;
   std::vector<double> fRPA_CCQE;
   std::vector<double> fRootinoFix;
   std::vector<double> fThetaDelta2NRad;
