@@ -509,15 +509,10 @@ bool PhaseIITreeMaker::Initialise(std::string configfile, DataModel &data){
       fPhaseIITrigTree->Branch("XSecWeights",&fxsec_weights);
       fPhaseIITrigTree->Branch("FluxWeights",&fflux_weights);
       fPhaseIITrigTree->Branch("weight_All0_UBGenie",&fAll0);
-      fPhaseIITrigTree->Branch("weight_All1_UBGenie",&fAll1);
-      fPhaseIITrigTree->Branch("weight_All2_UBGenie",&fAll2);
-      fPhaseIITrigTree->Branch("weight_All3_UBGenie",&fAll3);
-      fPhaseIITrigTree->Branch("weight_All4_UBGenie",&fAll4);
-      fPhaseIITrigTree->Branch("weight_All5_UBGenie",&fAll5);
       fPhaseIITrigTree->Branch("weight_AxFFCCQEshape_UBGenie",&fAxFFCCQEshape);
       fPhaseIITrigTree->Branch("weight_DecayAngMEC_UBGenie",&fDecayAngMEC);
       fPhaseIITrigTree->Branch("weight_NormCCCOH_UBGenie",&fNormCCCOH);
-      fPhaseIITrigTree->Branch("weight_Norm_NCCOH_UBGenie",&fNorm_NCCOH);
+      fPhaseIITrigTree->Branch("weight_NormNCCOH_UBGenie",&fNormNCCOH);
       fPhaseIITrigTree->Branch("weight_RPA_CCQE_UBGenie",&fRPA_CCQE);
       fPhaseIITrigTree->Branch("weight_RootinoFix_UBGenie",&fRootinoFix);
       fPhaseIITrigTree->Branch("weight_ThetaDelta2NRad_UBGenie",&fThetaDelta2NRad);
@@ -1326,15 +1321,10 @@ void PhaseIITreeMaker::ResetVariables() {
 
   if (Reweight_fill){
     fAll0.clear();
-    fAll1.clear();
-    fAll2.clear();
-    fAll3.clear();
-    fAll4.clear();
-    fAll5.clear();
     fAxFFCCQEshape.clear();
     fDecayAngMEC.clear();
     fNormCCCOH.clear();
-    fNorm_NCCOH.clear();
+    fNormNCCOH.clear();
     fRPA_CCQE.clear();
     fRootinoFix.clear();
     fThetaDelta2NRad.clear();
@@ -2652,15 +2642,10 @@ void PhaseIITreeMaker::FillWeightInfo() {
   bool get_flux_weights = m_data->Stores.at("ANNIEEvent")->Get("flux_weights",fflux_weights);
   if (get_xsec_weights && get_flux_weights){
     fAll0 = fxsec_weights["All0"];
-    fAll1 = fxsec_weights["All1"];
-    fAll2 = fxsec_weights["All2"];
-    fAll3 = fxsec_weights["All3"];
-    fAll4 = fxsec_weights["All4"];
-    fAll5 = fxsec_weights["All5"];
     fAxFFCCQEshape = fxsec_weights["AxFFCCQEshape"];
     fDecayAngMEC = fxsec_weights["DecayAngMEC"];
     fNormCCCOH = fxsec_weights["NormCCCOH"];
-    fNorm_NCCOH = fxsec_weights["Norm_NCCOH"];
+    fNormNCCOH = fxsec_weights["NormNCCOH"];
     fRPA_CCQE = fxsec_weights["RPA_CCQE"];
     fRootinoFix = fxsec_weights["RootinoFix"];
     fThetaDelta2NRad = fxsec_weights["ThetaDelta2NRad"];
