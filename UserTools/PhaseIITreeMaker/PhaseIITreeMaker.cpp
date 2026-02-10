@@ -54,6 +54,14 @@ bool PhaseIITreeMaker::Initialise(std::string configfile, DataModel &data){
     case 2:
       hasNuis = true;
       break;
+    case -1:
+      hasGenie = false;
+      hasNuis  = false;
+      break;
+    default:
+      hasGenie = false;
+      hasNuis  = false;
+      break;
   }
 
   std::string output_filename;
