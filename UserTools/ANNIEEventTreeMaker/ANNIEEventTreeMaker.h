@@ -77,6 +77,7 @@ public:
     void LoadTankClusterHits(std::vector<Hit> cluster_hits);
     void LoadTankClusterHitsMC(std::vector<MCHit> cluster_hits, std::vector<unsigned long> cluster_detkeys);
     bool LoadTankClusterClassifiers(double cluster_time);
+    bool LoadVertexLeastSquares(double cluster_time);
 
     vector<IDConfigRecord> LoadIDConfig(const string& filename);
     tuple<int, string> queryNearestID(const vector<IDConfigRecord>& data, int targetRun, int accid);
@@ -88,6 +89,7 @@ private:
     // General variables
     bool isData = 1;
     bool hasGenie;
+    bool ApplyDeadMask;
 
     int ANNIEEventTreeMakerVerbosity = 0;
     int v_error = 0;
@@ -342,6 +344,12 @@ private:
     vector<double> fClusterChargePointYV;
     vector<double> fClusterChargePointZV;
     vector<double> fClusterChargeBalanceV;
+
+    // ****************** VertexLeastSquares Reco ****************** //
+    std::map<double, Position> *fVertexMap = nullptr; // the vertices
+    vector<double> frecoLeastSqVtxX;
+    vector<double> frecoLeastSqVtxY;
+    vector<double> frecoLeastSqVtxZ;
 
     // MRD cluster information
     int fMRDClusterNumber;

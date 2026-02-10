@@ -29,6 +29,7 @@ bool ANNIEEventBuilder::Initialise(std::string configfile, DataModel &data){
   save_raw_data = false;	//Default option: Do not save the raw data (processed files get very large)
   store_beam_status = false;	//Should the beam status be stored? If yes, need the BeamDecoder tool in the ToolChain
   LAPPDOffsetFile = "None";	//File specifying the offset variables for the LAPPD global timestamps (if automatic determination goes wrong)
+  VertexLeastSq = false;
 
   /////////////////////////////////////////////////////////////////
   m_variables.Get("verbosity",verbosity);
@@ -51,6 +52,7 @@ bool ANNIEEventBuilder::Initialise(std::string configfile, DataModel &data){
   m_variables.Get("LAPPDOffsetFile",LAPPDOffsetFile);
   m_variables.Get("BuildStage1Data",BuildStage1Data);
   m_variables.Get("SaveSeparatePartfiles",SaveSeparatePartfiles);
+  m_variables.Get("VertexLeastSquares",VertexLeastSq);
   pause_threshold*=1E9;
 
   if(BuildType == "TankAndMRD" || BuildType == "TankAndMRDAndCTC" || BuildType == "TankAndMRDAndCTCAndLAPPD"){

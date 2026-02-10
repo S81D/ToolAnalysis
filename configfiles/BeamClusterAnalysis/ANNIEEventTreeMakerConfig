@@ -6,6 +6,9 @@ fillLAPPDEventsOnly 0
 TankCluster_fill 1
 cluster_TankHitInfo_fill 1
 
+ApplyDeadMask 1
+VertexLeastSquares 1
+
 TankReco_fill 0
 
 OutputFile ANNIETree.root

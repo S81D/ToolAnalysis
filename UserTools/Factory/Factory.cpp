@@ -187,5 +187,6 @@ if (tool=="FitRWMWaveform") ret=new FitRWMWaveform;
 if (tool=="LAPPDLoadTXT") ret=new LAPPDLoadTXT;
 if (tool=="LAPPDBSCharging") ret=new LAPPDBSCharging;
 if (tool=="PrintADCTraces") ret=new PrintADCTraces;
+if (tool=="VertexLeastSquares") ret=new VertexLeastSquares;
 return ret;
 }

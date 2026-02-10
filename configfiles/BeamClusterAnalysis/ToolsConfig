@@ -21,4 +21,6 @@ FitRWMWaveform FitRWMWaveform ./configfiles/BeamClusterAnalysis/FitRWMWaveformCo
 #myCNNImage CNNImage ./configfiles/BeamClusterAnalysis/CNNImageConfig
 #myRingCounting PythonScript configfiles/BeamClusterAnalysis/RingCountingConfig
 
+VertexLeastSquares VertexLeastSquares configfiles/BeamClusterAnalysis/VertexLeastSquaresConfig
+
 ANNIEEventTreeMaker ANNIEEventTreeMaker ./configfiles/BeamClusterAnalysis/ANNIEEventTreeMakerConfig

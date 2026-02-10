@@ -34,6 +34,12 @@ bool ANNIEEventTreeMaker::Initialise(std::string configfile, DataModel &data)
   m_variables.Get("MRDHitInfo_fill", MRDHitInfo_fill);
   m_variables.Get("RWMBRF_fill", RWMBRF_fill);
 
+  VertexLeastSq = false;
+  m_variables.Get("VertexLeastSquares",VertexLeastSq);
+
+  ApplyDeadMask = false;
+  m_variables.Get("ApplyDeadMask",ApplyDeadMask);
+
   m_variables.Get("MCTruth_fill", MCTruth_fill);
   m_variables.Get("MRDReco_fill", MRDReco_fill);
   m_variables.Get("TankReco_fill", TankReco_fill);
@@ -178,6 +184,12 @@ bool ANNIEEventTreeMaker::Initialise(std::string configfile, DataModel &data)
     fANNIETree->Branch("hitChankey", &fHitChankey);
     fANNIETree->Branch("hitChankeyMC", &fHitChankeyMC);
     fANNIETree->Branch("hitPMTType", &fHitPMTType);
+  }
+
+  if(VertexLeastSq) {
+      fANNIETree->Branch("recoLeastSqVtxX",&frecoLeastSqVtxX);
+      fANNIETree->Branch("recoLeastSqVtxY",&frecoLeastSqVtxY);
+      fANNIETree->Branch("recoLeastSqVtxZ",&frecoLeastSqVtxZ); 
   }
 
   if (SiPMPulseInfo_fill)
@@ -878,6 +890,10 @@ void ANNIEEventTreeMaker::ResetVariables()
   fClusterChargePointZV.clear();
   fClusterChargeBalanceV.clear();
 
+  frecoLeastSqVtxX.clear();
+  frecoLeastSqVtxY.clear();
+  frecoLeastSqVtxZ.clear();
+
   // MRD cluster information
   fMRDClusterNumber = 0;
   fMRDClusterHitNumber.clear();
@@ -1298,9 +1314,15 @@ void ANNIEEventTreeMaker::LoadAllTankHits()
       int wcsimid = channelkey_to_pmtid.at(channel_key);
       channel_key_data = pmtid_to_channelkey[wcsimid];
     }
+
+    bool SPE_available = false;
+    if (ApplyDeadMask && this_detector->GetStatus() == detectorstatus::OFF) {
+        goto skip_channel;  // do not save the hits information for a Dead PMT (if the mask is on), jump to skip_channel
+    }
+
     std::map<int, double>::iterator it = ChannelKeyToSPEMap.find(channel_key);
     std::map<int, double>::iterator it_mc = ChannelKeyToSPEMap.find(channel_key_data);
-    bool SPE_available = true;
+    
     if (isData)
       SPE_available = (it != ChannelKeyToSPEMap.end());
     else
@@ -1353,6 +1375,7 @@ void ANNIEEventTreeMaker::LoadAllTankHits()
       }
     }
 
+    skip_channel:   // skip the block above if the PMT is dead, advance the iterator
     if (isData)
     {
       it_tank_data++;
@@ -1789,6 +1812,37 @@ bool ANNIEEventTreeMaker::LoadClusterInfo()
   return true;
 }
 
+
+bool PhaseIITreeMaker::LoadVertexLeastSquares(double cluster_time){
+  Log("PhaseITreeMaker tool: Getting reconstructed vertex position for cluster (VertexLeastSquares tool)", v_debug, verbosity);
+  bool goodVertexMap = m_data->Stores.at("ANNIEEvent")->Get("VertexLeastSquaresMap", fVertexMap);
+  if (!goodVertexMap) {
+    logmessage = "PhaseIITreeMaker: no VertexLeastSquaresMap in the ANNIEEvent!";
+    Log(logmessage, v_debug, verbosity);
+  } else { 
+    Log("PhaseITreeMaker tool: Setting VertexLeastSquares reco variables", v_debug, verbosity);
+    double tc_x = 0.0;       // [m]
+    double tc_y = -0.1446;
+    double tc_z = 1.681;
+    Position vertex = fVertexMap->at(cluster_time);
+    frecoLeastSqVtxX.push_back(vertex.X() - tc_x);    // shift to align with tank center
+    frecoLeastSqVtxY.push_back(vertex.Y() - tc_y);    // [m]
+    frecoLeastSqVtxZ.push_back(vertex.Z() - tc_z);
+    Log("PhaseIITreeMaker tool: Vertex LS reco: X = " + std::to_string(vertex.X() - tc_x) + 
+    ", Y = " + std::to_string(vertex.Y() - tc_y) + 
+    ", Z = " + std::to_string(vertex.Z() - tc_z), v_debug, verbosity);
+  }
+  return goodVertexMap;
+}
+
+fClusterChargePointXV.push_back(ClusterChargePoint.X());
+    fClusterChargePointYV.push_back(ClusterChargePoint.Y());
+
+fClusterChargePointX = ClusterChargePoint.X();
+    fClusterChargePointY = ClusterChargePoint.Y();
+
+
+
 void ANNIEEventTreeMaker::LoadTankClusterHits(std::vector<Hit> cluster_hits)
 {
   Position detector_center = geom->GetTankCentre();
@@ -1814,10 +1868,13 @@ void ANNIEEventTreeMaker::LoadTankClusterHits(std::vector<Hit> cluster_hits)
   for (int i = 0; i < (int)cluster_hits.size(); i++)
   {
     int channel_key = cluster_hits.at(i).GetTubeId();
+    Detector* this_detector = geom->ChannelToDetector(channel_key);
+	  if (ApplyDeadMask && this_detector->GetStatus() == detectorstatus::OFF) {
+      continue;
+    }
     std::map<int, double>::iterator it = ChannelKeyToSPEMap.find(channel_key);
     if (it != ChannelKeyToSPEMap.end())
     { // Charge to SPE conversion is available
-      Detector *this_detector = geom->ChannelToDetector(channel_key);
       unsigned long detkey = this_detector->GetDetectorID();
       Position det_position = this_detector->GetDetectorPosition();
       double hit_charge = cluster_hits.at(i).GetCharge();
