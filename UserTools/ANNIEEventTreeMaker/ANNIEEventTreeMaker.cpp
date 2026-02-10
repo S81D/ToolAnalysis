@@ -1316,12 +1316,15 @@ void ANNIEEventTreeMaker::LoadAllTankHits()
     }
 
     bool SPE_available = false;
+    std::map<int, double>::iterator it;
+    std::map<int, double>::iterator it_mc;
+
     if (ApplyDeadMask && this_detector->GetStatus() == detectorstatus::OFF) {
         goto skip_channel;  // do not save the hits information for a Dead PMT (if the mask is on), jump to skip_channel
     }
 
-    std::map<int, double>::iterator it = ChannelKeyToSPEMap.find(channel_key);
-    std::map<int, double>::iterator it_mc = ChannelKeyToSPEMap.find(channel_key_data);
+    it = ChannelKeyToSPEMap.find(channel_key);
+    it_mc = ChannelKeyToSPEMap.find(channel_key_data);
     
     if (isData)
       SPE_available = (it != ChannelKeyToSPEMap.end());
@@ -1813,14 +1816,14 @@ bool ANNIEEventTreeMaker::LoadClusterInfo()
 }
 
 
-bool PhaseIITreeMaker::LoadVertexLeastSquares(double cluster_time){
-  Log("PhaseITreeMaker tool: Getting reconstructed vertex position for cluster (VertexLeastSquares tool)", v_debug, verbosity);
+bool ANNIEEventTreeMaker::LoadVertexLeastSquares(double cluster_time){
+  Log("ANNIEEventTreeMaker tool: Getting reconstructed vertex position for cluster (VertexLeastSquares tool)", v_debug, ANNIEEventTreeMakerVerbosity);
   bool goodVertexMap = m_data->Stores.at("ANNIEEvent")->Get("VertexLeastSquaresMap", fVertexMap);
   if (!goodVertexMap) {
-    logmessage = "PhaseIITreeMaker: no VertexLeastSquaresMap in the ANNIEEvent!";
-    Log(logmessage, v_debug, verbosity);
+    std::string logmessage = "ANNIEEventTreeMaker: no VertexLeastSquaresMap in the ANNIEEvent!";
+    Log(logmessage, v_debug, ANNIEEventTreeMakerVerbosity);
   } else { 
-    Log("PhaseITreeMaker tool: Setting VertexLeastSquares reco variables", v_debug, verbosity);
+    Log("ANNIEEventTreeMaker tool: Setting VertexLeastSquares reco variables", v_debug, ANNIEEventTreeMakerVerbosity);
     double tc_x = 0.0;       // [m]
     double tc_y = -0.1446;
     double tc_z = 1.681;
@@ -1828,19 +1831,12 @@ bool PhaseIITreeMaker::LoadVertexLeastSquares(double cluster_time){
     frecoLeastSqVtxX.push_back(vertex.X() - tc_x);    // shift to align with tank center
     frecoLeastSqVtxY.push_back(vertex.Y() - tc_y);    // [m]
     frecoLeastSqVtxZ.push_back(vertex.Z() - tc_z);
-    Log("PhaseIITreeMaker tool: Vertex LS reco: X = " + std::to_string(vertex.X() - tc_x) + 
+    Log("ANNIEEventTreeMaker tool: Vertex LS reco: X = " + std::to_string(vertex.X() - tc_x) + 
     ", Y = " + std::to_string(vertex.Y() - tc_y) + 
-    ", Z = " + std::to_string(vertex.Z() - tc_z), v_debug, verbosity);
+    ", Z = " + std::to_string(vertex.Z() - tc_z), v_debug, ANNIEEventTreeMakerVerbosity);
   }
   return goodVertexMap;
 }
-
-fClusterChargePointXV.push_back(ClusterChargePoint.X());
-    fClusterChargePointYV.push_back(ClusterChargePoint.Y());
-
-fClusterChargePointX = ClusterChargePoint.X();
-    fClusterChargePointY = ClusterChargePoint.Y();
-
 
 
 void ANNIEEventTreeMaker::LoadTankClusterHits(std::vector<Hit> cluster_hits)

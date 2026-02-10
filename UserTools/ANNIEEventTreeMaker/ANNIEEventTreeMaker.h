@@ -90,6 +90,7 @@ private:
     bool isData = 1;
     bool hasGenie;
     bool ApplyDeadMask;
+    bool VertexLeastSq;
 
     int ANNIEEventTreeMakerVerbosity = 0;
     int v_error = 0;
