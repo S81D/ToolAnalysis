@@ -1778,6 +1778,12 @@ bool ANNIEEventTreeMaker::LoadClusterInfo()
         if (ANNIEEventTreeMakerVerbosity > 3)
           Log("ANNIEEventTreeMaker Tool: No cluster classifiers.  Continuing tree", v_debug, ANNIEEventTreeMakerVerbosity);
       }
+
+      bool good_reco = this->LoadVertexLeastSquares(it_cluster_pair->first);
+      if(!good_reco){
+        if(verbosity>v_debug) Log("PhaseIITreeMaker Tool: VertexLeastSquares Reco (Data). Continuing tree",v_debug,verbosity);
+      }
+
     }
     else
     {
