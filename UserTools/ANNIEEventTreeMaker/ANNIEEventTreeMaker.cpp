@@ -1781,7 +1781,7 @@ bool ANNIEEventTreeMaker::LoadClusterInfo()
 
       bool good_reco = this->LoadVertexLeastSquares(it_cluster_pair->first);
       if(!good_reco){
-        if(verbosity>v_debug) Log("PhaseIITreeMaker Tool: VertexLeastSquares Reco (Data). Continuing tree",v_debug,verbosity);
+        if(ANNIEEventTreeMakerVerbosity>v_debug) Log("ANNIEEventTreeMaker Tool: VertexLeastSquares Reco (Data). Continuing tree",v_debug,ANNIEEventTreeMakerVerbosity);
       }
 
     }
