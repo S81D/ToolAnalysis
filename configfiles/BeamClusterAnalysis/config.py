@@ -24,6 +24,9 @@ file.write('TankClusterProcessing 1\n')
 file.write('TriggerProcessing 1\n')
 file.write('TankHitInfo_fill 1\n')
 file.write('\n')
+file.write('ApplyDeadMask 1\n')
+file.write('VertexLeastSquares 1\n')
+file.write('\n')
 
 if run_type == 'beam' or run_type == 'cosmic' or run_type == 'beam_39':
     file.write('MRDClusterProcessing 1\n')
@@ -49,9 +52,9 @@ file.write('LAPPD_MC_fill 0\n')
 file.write('\n')
 
 if run_type == 'beam' or run_type == 'laser' or run_type == 'beam_39':
-    file.write('LAPPDData_fill 1\n')
-    file.write('LAPPDReco_fill 1\n')
-    file.write('LAPPD_PPS_fill 1\n')
+    file.write('LAPPDData_fill 0\n')
+    file.write('LAPPDReco_fill 0\n')
+    file.write('LAPPD_PPS_fill 0\n')
     file.write('LAPPD_Waveform_fill 0\n')
 else:
     file.write('LAPPDData_fill 0\n')
@@ -81,16 +84,17 @@ file2.write('myClusterFinder ClusterFinder ./configfiles/BeamClusterAnalysis/Clu
 file2.write('myClusterClassifiers ClusterClassifiers ./configfiles/BeamClusterAnalysis/ClusterClassifiersConfig\n')
 file2.write('myEventSelector EventSelector ./configfiles/BeamClusterAnalysis/EventSelectorConfig\n')
 
-if run_type == 'beam' or run_type == 'laser' or run_type == 'beam_39':
-    file2.write('LAPPDLoadStore LAPPDLoadStore configfiles/LAPPDProcessedAna/Configs\n')
-    file2.write('LAPPDStoreReorder LAPPDStoreReorder configfiles/LAPPDProcessedAna/ConfigStoreReadIn\n')
-    file2.write('LAPPDTimeAlignment LAPPDTimeAlignment configfiles/LAPPDProcessedAna/ConfigPreProcess\n')
-    file2.write('LAPPDBaseline LAPPDBaseline configfiles/LAPPDProcessedAna/ConfigPreProcess\n')
-    file2.write('LAPPDThresReco LAPPDThresReco configfiles/LAPPDProcessedAna/ConfigPlot\n')
+#if run_type == 'beam' or run_type == 'laser' or run_type == 'beam_39':
+#    file2.write('LAPPDLoadStore LAPPDLoadStore configfiles/LAPPDProcessedAna/Configs\n')
+#    file2.write('LAPPDStoreReorder LAPPDStoreReorder configfiles/LAPPDProcessedAna/ConfigStoreReadIn\n')
+#    file2.write('LAPPDTimeAlignment LAPPDTimeAlignment configfiles/LAPPDProcessedAna/ConfigPreProcess\n')
+#    file2.write('LAPPDBaseline LAPPDBaseline configfiles/LAPPDProcessedAna/ConfigPreProcess\n')
+#    file2.write('LAPPDThresReco LAPPDThresReco configfiles/LAPPDProcessedAna/ConfigPlot\n')
 
 if run_type == 'beam' or run_type == 'beam_39':
     file2.write('FitRWMWaveform FitRWMWaveform ./configfiles/BeamClusterAnalysis/FitRWMWaveformConfig\n')
 
+file2.write('VertexLeastSquares VertexLeastSquares configfiles/BeamClusterAnalysis/VertexLeastSquaresConfig\n')
 file2.write('ANNIEEventTreeMaker ANNIEEventTreeMaker ./configfiles/BeamClusterAnalysis/ANNIEEventTreeMakerConfig\n')
 
 file2.close()
