@@ -5,22 +5,6 @@ myFindMrdTracks FindMrdTracks configfiles/BeamClusterAnalysis/FindMrdTracksConfi
 myClusterFinder ClusterFinder ./configfiles/BeamClusterAnalysis/ClusterFinderConfig
 myClusterClassifiers ClusterClassifiers ./configfiles/BeamClusterAnalysis/ClusterClassifiersConfig
 myEventSelector EventSelector ./configfiles/BeamClusterAnalysis/EventSelectorConfig
-
-
-myDigitBuilder DigitBuilder ./configfiles/BeamClusterAnalysis/DigitBuilderConfig
-
-LAPPDLoadStore LAPPDLoadStore configfiles/LAPPDProcessedAna/Configs
-LAPPDStoreReorder LAPPDStoreReorder configfiles/LAPPDProcessedAna/ConfigStoreReadIn
-LAPPDTimeAlignment LAPPDTimeAlignment configfiles/LAPPDProcessedAna/ConfigPreProcess
-LAPPDBaseline LAPPDBaseline configfiles/LAPPDProcessedAna/ConfigPreProcess
-LAPPDThresReco LAPPDThresReco configfiles/LAPPDProcessedAna/ConfigPlot
-#LAPPDPlots LAPPDPlots configfiles/LAPPDProcessedAna/ConfigPlot
-
 FitRWMWaveform FitRWMWaveform ./configfiles/BeamClusterAnalysis/FitRWMWaveformConfig
-
-#myCNNImage CNNImage ./configfiles/BeamClusterAnalysis/CNNImageConfig
-#myRingCounting PythonScript configfiles/BeamClusterAnalysis/RingCountingConfig
-
 VertexLeastSquares VertexLeastSquares configfiles/BeamClusterAnalysis/VertexLeastSquaresConfig
-
 ANNIEEventTreeMaker ANNIEEventTreeMaker ./configfiles/BeamClusterAnalysis/ANNIEEventTreeMakerConfig
